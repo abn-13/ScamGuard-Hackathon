@@ -12,15 +12,15 @@
 4. **APIs & Services → Credentials → Create Credentials → OAuth client ID**:
    - Application type: **Android**
    - Package name: `com.scamguard.spike`
-   - SHA-1 certificate fingerprint (debug keystore on this machine):
+   - SHA-1 certificate fingerprint (from the shared debug keystore checked into this repo at `app/debug.keystore`):
      ```
      77:8D:65:91:1D:40:0C:84:C9:C9:58:39:E6:02:37:AD:DA:8E:A7:2E
      ```
    - Create. (No client ID string needs to go in the app's code — Google Play services on the device validates the calling app by package name + signing certificate against this registered client.)
 
-If you ever re-generate the debug keystore or build with a different machine/keystore, regenerate the SHA-1 with:
+**Note:** `app/build.gradle.kts` points the `debug` build type's `signingConfig` at `app/debug.keystore`, which is checked into this repo. That means everyone who clones the repo and builds the debug variant automatically signs with the exact same key/SHA-1 above — no manual keystore copying needed, and Gmail OAuth works out of the box for anyone whose email is added as a test user (see step 3). If you ever need to regenerate/inspect it:
 ```
-keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
+keytool -list -v -keystore app/debug.keystore -alias androiddebugkey -storepass android -keypass android
 ```
 
 ## 2. Build and install
