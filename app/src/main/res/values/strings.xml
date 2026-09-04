@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">ScamGuard Spike</string>
+    <string name="sms_screen_title">SMS Reading Test</string>
+    <string name="email_screen_title">Email Reading Test</string>
+</resources>
