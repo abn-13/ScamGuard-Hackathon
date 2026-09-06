@@ -67,8 +67,10 @@ This is prompt-engineering, not infra — no new files. Feed it real scam exampl
 Two things per module: (a) compute `is_known_sender` — SMS via `ContactsContract`, email via Gmail thread history/People API — and (b) POST the message to `/check-message` instead of just displaying it, then show the returned risk_level + reason in the UI.
 **Done when:** sending yourself a test SMS/email shows a real verdict from the backend, not just the raw message.
 
-### Task 5 — Confirm AWS Bedrock access
-No new file — just your `.env`. Fill in `BEDROCK_MODEL_ID` using the command from the "AWS Bedrock Setup" doc, and confirm `/check-message` returns a real verdict instead of the 503 stub error.
+### Task 5 — Confirm AWS Bedrock access ✅ done
+Verified working on the team account (`us-east-1`) with `BEDROCK_MODEL_ID=us.anthropic.claude-haiku-4-5-20251001-v1:0` — already the default in `.env.example`. If you're using `aws login` instead of a static IAM key, make sure `botocore[crt]` is installed (it's in `requirements.txt`) — without it boto3 can't read the login session's temporary credentials.
+
+**Gotcha to know about:** a model showing up in `aws bedrock list-foundation-models` or `list-inference-profiles` does **not** mean your account has access to it — that's requested separately per model in the Bedrock console. Sonnet 5 listed fine but returned `AccessDeniedException` on an actual call; Haiku 4.5 worked. Test with a real request, not just the listing command, before assuming a different model ID works for you.
 
 ## Notes
 - Never commit `.env` — already gitignored.
