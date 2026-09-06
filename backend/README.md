@@ -47,10 +47,9 @@ Don't need to touch these unless something's actually broken:
 
 ## Tasks
 
-### Task 1 — Real Google Safe Browsing link check
+### Task 1 — Real Google Safe Browsing link check ✅ done
 **File:** `app/tools/link_check.py`
-Get an API key: Cloud Console → APIs & Services → Library → enable "Safe Browsing API" → Credentials → Create API key. Set `SAFE_BROWSING_API_KEY` in `.env`. The real API call is already written — just confirm it works.
-**Done when:** a `/check-message` call with a link to Google's [test malware URL](https://testsafebrowsing.appspot.com/) comes back "malicious" instead of "unknown."
+Reused the same Google Cloud project as the Gmail OAuth setup — just needed "Safe Browsing API" enabled + a plain API key (no OAuth needed for this one). Verified live: known test malware/phishing URLs come back "malicious," google.com comes back "clean," and a full `/check-message` call with a phishing email correctly returns high risk with the link result reflected in the reasoning.
 
 ### Task 2 — Real Telegram family alerts
 **File:** `app/alerts.py`
