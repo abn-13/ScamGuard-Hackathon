@@ -1,10 +1,10 @@
-import os
 from typing import Optional
 
 from pydantic import BaseModel, Field
 from strands import Agent
 from strands.models import BedrockModel
 
+from .config import settings
 from .models import RiskLevel
 from .schemas import IncomingMessage
 from .tools.link_check import check_url_reputation
@@ -48,9 +48,11 @@ _agent: Optional[Agent] = None
 
 
 def _build_agent() -> Agent:
+    if not settings.bedrock_model_id:
+        raise RuntimeError("BEDROCK_MODEL_ID not configured (check .env)")
     model = BedrockModel(
-        model_id=os.environ["BEDROCK_MODEL_ID"],
-        region_name=os.environ.get("AWS_REGION", "us-east-1"),
+        model_id=settings.bedrock_model_id,
+        region_name=settings.aws_region,
         temperature=0.2,
     )
     return Agent(model=model, tools=[check_url_reputation], system_prompt=SYSTEM_PROMPT)

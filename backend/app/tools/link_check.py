@@ -1,7 +1,7 @@
-import os
-
 import requests
 from strands import tool
+
+from ..config import settings
 
 SAFE_BROWSING_URL = "https://safebrowsing.googleapis.com/v4/threatMatches:find"
 
@@ -20,7 +20,7 @@ def check_url_reputation(url: str) -> dict:
         A dict with "url", "verdict" ("clean" | "malicious" | "unknown"), and
         "threat_types" when malicious.
     """
-    api_key = os.environ.get("SAFE_BROWSING_API_KEY")
+    api_key = settings.safe_browsing_api_key
     if not api_key:
         # TODO(Task 1 owner): remove this stub once SAFE_BROWSING_API_KEY is set in .env.
         return {

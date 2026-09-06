@@ -1,8 +1,7 @@
-import os
-
 import requests
 from sqlmodel import Session, select
 
+from .config import settings
 from .models import FamilyMember
 
 TELEGRAM_API = "https://api.telegram.org/bot{token}/sendMessage"
@@ -16,7 +15,7 @@ def send_family_alert(session: Session, user_id: int, sender: str, reason: str) 
     if not members:
         return
 
-    token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    token = settings.telegram_bot_token
     text = f"⚠️ ScamGuard flagged a message.\nFrom: {sender}\nWhy: {reason}"
 
     for member in members:
