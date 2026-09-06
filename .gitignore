@@ -9,3 +9,11 @@
 .cxx
 local.properties
 /app/build
+
+# Python backend
+backend/.venv
+backend/__pycache__
+backend/**/__pycache__
+backend/.pytest_cache
+backend/*.db
+backend/.env
