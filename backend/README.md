@@ -56,10 +56,17 @@ Reused the same Google Cloud project as the Gmail OAuth setup — just needed "S
 Create a bot via [@BotFather](https://t.me/BotFather) on Telegram (a couple of minutes, gives you a token). Set `TELEGRAM_BOT_TOKEN` in `.env`. Have a family member message the bot once, then hit `https://api.telegram.org/bot<TOKEN>/getUpdates` to read their chat ID out of the response. Register them via `POST /family-members`.
 **Done when:** a `/check-message` call that comes back medium/high risk actually messages that person on Telegram.
 
-### Task 3 — Reasoning prompt quality
+### Task 3 — split across two people
+
+**3a — Reasoning prompt quality**
 **File:** `app/agent.py` (the `SYSTEM_PROMPT` string)
-This is prompt-engineering, not infra — no new files. Feed it real scam examples *and* real legitimate messages (so it doesn't cry wolf on normal OTPs/delivery notices), and tune the wording until verdicts look right.
+Prompt-engineering, not infra — no new files. Feed it real scam examples *and* real legitimate messages (so it doesn't cry wolf on normal OTPs/delivery notices), and tune the wording until verdicts look right.
 **Done when:** you've got a handful of test messages (obvious scams, obviously-fine ones, ambiguous ones) and the risk_level + reason look right for all of them.
+
+**3b — Domain-spoof check tool**
+**New file:** `app/tools/domain_check.py`
+Build a new Strands `@tool` (same pattern as `check_url_reputation` in `link_check.py`) that flags an email sender's domain as a lookalike of a well-known brand — e.g. `paypa1-verify.com` impersonating PayPal. No external API needed; this can be a heuristic (a short list of commonly-impersonated brand domains + some kind of similarity/typosquat check against the sender's domain). Then wire it into `app/agent.py`: add it to the agent's `tools=[...]` list, and add a line to `SYSTEM_PROMPT` telling the agent to use it for email senders.
+**Done when:** you've got a handful of real lookalike domains, real brand domains, and unrelated domains, and the tool's verdict is right for all of them.
 
 ### Task 4 — Android → backend wiring
 **Files:** `app/src/main/java/com/scamguard/spike/sms/` and `.../email/` in the Android app (separate repo folder, not this one)
