@@ -1,9 +1,11 @@
 package com.scamguard.spike.email
 
+import android.util.Base64
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.gmail.Gmail
+import com.google.api.services.gmail.model.MessagePart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -41,20 +43,62 @@ object GmailApiClient {
                 .messages.orEmpty()
 
             val items = messageRefs.map { ref ->
+                // "full" (not just "metadata") so we get the actual body to send the
+                // backend for judging, not just the From/Subject headers.
                 val full = service.users().messages().get("me", ref.id)
-                    .setFormat("metadata")
-                    .setMetadataHeaders(listOf("From", "Subject"))
+                    .setFormat("full")
                     .execute()
 
                 val headers = full.payload?.headers.orEmpty()
+                val bodyText = extractPlainText(full.payload).ifBlank { full.snippet ?: "" }
+
+                // Task 4's "Gmail thread history" signal for is_known_sender: more than one
+                // message in this conversation means there's been back-and-forth already.
+                val threadMessageCount = full.threadId?.let { threadId ->
+                    service.users().threads().get("me", threadId)
+                        .setFormat("minimal")
+                        .execute()
+                        .messages?.size
+                } ?: 1
+
                 EmailMessageItem(
                     sender = headers.find { it.name == "From" }?.value ?: "(unknown)",
                     subject = headers.find { it.name == "Subject" }?.value ?: "(no subject)",
                     snippet = full.snippet ?: "",
-                    timestampMillis = full.internalDate ?: 0L
+                    bodyText = bodyText,
+                    timestampMillis = full.internalDate ?: 0L,
+                    isKnownSender = threadMessageCount > 1
                 )
             }
 
             profileEmail to items
         }
+
+    /**
+     * Walks the MIME part tree for a text/plain body, decoding the URL-safe base64 Gmail
+     * uses. Falls back to text/html (tags stripped) if no plain-text part exists, and to
+     * "" (the caller then falls back to the snippet) if there's no readable body at all.
+     */
+    private fun extractPlainText(part: MessagePart?): String {
+        if (part == null) return ""
+
+        val data = part.body?.data
+        if (part.mimeType == "text/plain" && data != null) {
+            return decodeBase64Url(data)
+        }
+
+        part.parts?.forEach { child ->
+            val text = extractPlainText(child)
+            if (text.isNotBlank()) return text
+        }
+
+        if (part.mimeType == "text/html" && data != null) {
+            return decodeBase64Url(data).replace(Regex("<[^>]*>"), " ")
+        }
+
+        return ""
+    }
+
+    private fun decodeBase64Url(data: String): String =
+        String(Base64.decode(data, Base64.URL_SAFE or Base64.NO_WRAP), Charsets.UTF_8)
 }

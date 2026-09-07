@@ -28,16 +28,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import com.scamguard.spike.backend.CheckState
+import com.scamguard.spike.backend.CheckStateLabel
+import com.scamguard.spike.backend.MessageSource
+import com.scamguard.spike.backend.ScamGuardApiClient
 import com.scamguard.spike.ui.theme.ScamGuardSpikeTheme
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class SmsListActivity : ComponentActivity() {
 
+    // READ_CONTACTS is needed to compute is_known_sender (Task 4), alongside the
+    // SMS-reading permissions the spike already requested.
     private val requiredPermissions = arrayOf(
         Manifest.permission.READ_SMS,
-        Manifest.permission.RECEIVE_SMS
+        Manifest.permission.RECEIVE_SMS,
+        Manifest.permission.READ_CONTACTS
     )
 
     private var permissionGranted by mutableStateOf(false)
@@ -90,8 +101,10 @@ class SmsListActivity : ComponentActivity() {
 
     private fun loadInbox() {
         messages.clear()
-        messages.addAll(SmsReader.readInbox(this))
+        val inbox = SmsReader.readInbox(this)
+        messages.addAll(inbox)
         registerLiveReceiver()
+        inbox.forEach { checkMessage(it) }
     }
 
     private fun registerLiveReceiver() {
@@ -99,6 +112,7 @@ class SmsListActivity : ComponentActivity() {
         val newReceiver = SmsReceiver { incoming ->
             // New messages first, matching the DESC sort loadInbox() already applied.
             messages.addAll(0, incoming)
+            incoming.forEach { checkMessage(it) }
         }
         ContextCompat.registerReceiver(
             this,
@@ -109,6 +123,23 @@ class SmsListActivity : ComponentActivity() {
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
         receiver = newReceiver
+    }
+
+    /** Task 4: compute is_known_sender on-device, then POST to the backend and show the verdict. */
+    private fun checkMessage(item: SmsMessageItem) {
+        item.checkState.value = CheckState.Checking
+        lifecycleScope.launch {
+            val isKnown = withContext(Dispatchers.IO) {
+                ContactLookup.isKnownSender(this@SmsListActivity, item.sender)
+            }
+            item.checkState.value = ScamGuardApiClient.checkMessage(
+                source = MessageSource.SMS,
+                sender = item.sender,
+                bodyText = item.body,
+                isKnownSender = isKnown,
+                receivedAtMillis = item.timestampMillis
+            )
+        }
     }
 }
 
@@ -122,9 +153,9 @@ private fun SmsScreen(
 ) {
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
         if (!permissionGranted) {
-            Text("This screen needs READ_SMS and RECEIVE_SMS to read your inbox.")
+            Text("This screen needs SMS and Contacts permission to read your inbox and check senders.")
             Button(onClick = onRequestPermission) {
-                Text("Grant SMS permissions")
+                Text("Grant permissions")
             }
             return@Column
         }
@@ -149,6 +180,7 @@ private fun SmsMessageCard(message: SmsMessageItem) {
             Text(text = message.sender)
             Text(text = formatTimestamp(message.timestampMillis))
             Text(text = message.body)
+            CheckStateLabel(message.checkState.value)
         }
     }
 }
