@@ -33,7 +33,7 @@ def _low_risk_agent() -> Mock:
 def test_email_pipeline_includes_precomputed_domain_assessment():
     agent = _fake_agent()
 
-    with patch("app.agent.get_agent", return_value=agent):
+    with patch("app.agent._build_agent", return_value=agent):
         verdict = run_pipeline(
             _message(MessageSource.email, "PayPal <verify@paypa1-verify.com>")
         )
@@ -55,7 +55,7 @@ def test_email_pipeline_includes_dmarc_failure_even_for_official_domain():
         "mx.example; spf=fail; dkim=fail; dmarc=fail header.from=paypal.com"
     )
 
-    with patch("app.agent.get_agent", return_value=agent):
+    with patch("app.agent._build_agent", return_value=agent):
         run_pipeline(message)
 
     prompt = agent.call_args.args[0]
@@ -71,7 +71,7 @@ def test_dmarc_failure_enforces_medium_risk_floor():
         "mx.example; spf=fail; dkim=fail; dmarc=fail header.from=paypal.com"
     )
 
-    with patch("app.agent.get_agent", return_value=agent):
+    with patch("app.agent._build_agent", return_value=agent):
         verdict = run_pipeline(message)
 
     assert verdict.risk_level == RiskLevel.medium
@@ -86,7 +86,7 @@ def test_misaligned_authentication_result_is_not_applied_to_visible_sender():
         "mx.example; dmarc=fail header.from=unrelated.example.net"
     )
 
-    with patch("app.agent.get_agent", return_value=agent):
+    with patch("app.agent._build_agent", return_value=agent):
         verdict = run_pipeline(message)
 
     prompt = agent.call_args.args[0]
@@ -97,7 +97,7 @@ def test_misaligned_authentication_result_is_not_applied_to_visible_sender():
 def test_suspicious_lookalike_enforces_medium_risk_floor():
     agent = _low_risk_agent()
 
-    with patch("app.agent.get_agent", return_value=agent):
+    with patch("app.agent._build_agent", return_value=agent):
         verdict = run_pipeline(
             _message(MessageSource.email, "USPS <parcel@usps-redelivery.example>")
         )
@@ -109,7 +109,7 @@ def test_suspicious_lookalike_enforces_medium_risk_floor():
 def test_unknown_domain_does_not_raise_low_risk_verdict():
     agent = _low_risk_agent()
 
-    with patch("app.agent.get_agent", return_value=agent):
+    with patch("app.agent._build_agent", return_value=agent):
         verdict = run_pipeline(_message(MessageSource.email, "hello@example.org"))
 
     assert verdict.risk_level == RiskLevel.low
@@ -119,7 +119,7 @@ def test_unknown_domain_does_not_raise_low_risk_verdict():
 def test_sms_pipeline_does_not_run_email_domain_assessment():
     agent = _fake_agent()
 
-    with patch("app.agent.get_agent", return_value=agent), patch(
+    with patch("app.agent._build_agent", return_value=agent), patch(
         "app.agent.assess_sender_domain"
     ) as assessment, patch("app.agent.assess_email_authentication") as auth_assessment:
         with patch("app.agent.assess_reply_to_alignment") as reply_to_assessment:
@@ -159,7 +159,7 @@ def test_email_pipeline_includes_reply_to_mismatch():
     message = _message(MessageSource.email, "Billing <notice@paypal.com>")
     message.reply_to = "refund-agent@example.net"
 
-    with patch("app.agent.get_agent", return_value=agent):
+    with patch("app.agent._build_agent", return_value=agent):
         run_pipeline(message)
 
     prompt = agent.call_args.args[0]
