@@ -80,3 +80,32 @@ def test_check_message_unknown_user_returns_404(client):
         },
     )
     assert resp.status_code == 404
+
+
+def test_email_accepts_optional_task3b_identity_headers(client):
+    user_resp = client.post("/users", json={"display_name": "Email Test User"})
+    user_id = user_resp.json()["id"]
+    fake_verdict = Verdict(risk_level=RiskLevel.low, reason="No strong warning found.")
+
+    with patch("app.main.run_pipeline", return_value=fake_verdict) as pipeline:
+        resp = client.post(
+            "/check-message",
+            json={
+                "user_id": user_id,
+                "source": "email",
+                "sender": "Notice <notice@example.com>",
+                "reply_to": "help@support.example.com",
+                "authentication_results": (
+                    "mx.example; spf=pass; dkim=pass; "
+                    "dmarc=pass header.from=example.com"
+                ),
+                "body_text": "A routine account notice.",
+                "is_known_sender": False,
+                "received_at": "2026-01-01T00:00:00Z",
+            },
+        )
+
+    assert resp.status_code == 200
+    incoming = pipeline.call_args.args[0]
+    assert incoming.reply_to == "help@support.example.com"
+    assert "dmarc=pass" in incoming.authentication_results

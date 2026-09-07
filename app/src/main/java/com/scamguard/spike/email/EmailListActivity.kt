@@ -28,6 +28,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.common.api.ApiException
+import com.scamguard.spike.backend.CheckState
+import com.scamguard.spike.backend.CheckStateLabel
+import com.scamguard.spike.backend.MessageSource
+import com.scamguard.spike.backend.ScamGuardApiClient
 import com.scamguard.spike.ui.theme.ScamGuardSpikeTheme
 import java.time.Instant
 import java.time.ZoneId
@@ -127,11 +131,27 @@ class EmailListActivity : ComponentActivity() {
                 signedInEmail = email
                 emails.clear()
                 emails.addAll(items)
+                items.forEach { checkEmail(it) }
             } catch (e: Exception) {
                 errorMessage = "Failed to fetch emails: ${e.message}"
             } finally {
                 isLoading = false
             }
+        }
+    }
+
+    /** Task 4: POST this already-fetched email (with its on-device is_known_sender) to the backend. */
+    private fun checkEmail(item: EmailMessageItem) {
+        item.checkState.value = CheckState.Checking
+        lifecycleScope.launch {
+            item.checkState.value = ScamGuardApiClient.checkMessage(
+                source = MessageSource.EMAIL,
+                sender = item.sender,
+                bodyText = item.bodyText,
+                subject = item.subject,
+                isKnownSender = item.isKnownSender,
+                receivedAtMillis = item.timestampMillis
+            )
         }
     }
 }
@@ -181,6 +201,7 @@ private fun EmailMessageCard(email: EmailMessageItem) {
             Text(text = formatTimestamp(email.timestampMillis))
             Text(text = email.subject)
             Text(text = email.snippet)
+            CheckStateLabel(email.checkState.value)
         }
     }
 }

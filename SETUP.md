@@ -41,3 +41,28 @@ This fires a real `SMS_RECEIVED` broadcast (caught live by the app if the SMS sc
 ## 4. Testing Email
 
 Open the Email screen, tap "Authorize Gmail access", pick the Google account you added as a test user, and grant the Gmail read-only permission when prompted. The list should show your real recent + older Gmail messages.
+
+## 5. Backend integration (Task 4)
+
+Both screens now POST every message to the backend's `/check-message` and show the
+returned risk level + reason under each item ("Checking with ScamGuard…" while in
+flight). To make that work:
+
+1. **Run the backend** (see `backend/README.md`) — `uvicorn app.main:app --reload`,
+   default port 8000.
+2. **Create a user** once against your local DB: open **http://localhost:8000/docs**
+   → `POST /users` → any `display_name` → note the returned `id`.
+3. **Point the app at your backend + that user id**: edit
+   `app/src/main/java/com/scamguard/spike/backend/BackendConfig.kt`.
+   - `BASE_URL` defaults to `http://10.0.2.2:8000`, which is the Android emulator's
+     alias for your machine's `localhost` — works out of the box for the emulator.
+     Testing on a **physical device**? Use your machine's LAN IP instead (device and
+     machine must be on the same Wi-Fi), e.g. `http://192.168.1.23:8000`.
+   - `USER_ID` defaults to `1`, i.e. the id you get from the very first user created
+     against a fresh DB. Change it if yours came back different.
+4. Grant the extra **Contacts** permission when prompted on the SMS screen — it's now
+   requested alongside SMS access, used to compute `is_known_sender`.
+
+`is_known_sender` is computed on-device before each check: for SMS, whether the
+sender's number matches a saved Contact; for email, whether the message is part of a
+Gmail thread with more than one message (i.e. there's been a reply already).

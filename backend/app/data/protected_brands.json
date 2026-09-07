@@ -1,0 +1,294 @@
+[
+  {
+    "brand": "PayPal",
+    "official_domains": ["paypal.com"],
+    "comparison_tokens": ["paypal"],
+    "regions": ["global"],
+    "source": "https://www.paypal.com/"
+  },
+  {
+    "brand": "Amazon",
+    "official_domains": [
+      "amazon.com",
+      "amazon.ca",
+      "amazon.co.uk",
+      "amazon.com.au",
+      "amazon.de",
+      "amazon.fr",
+      "amazon.it",
+      "amazon.es",
+      "amazon.co.jp",
+      "amazon.in",
+      "amazon.sg"
+    ],
+    "comparison_tokens": ["amazon"],
+    "regions": ["global"],
+    "source": "https://www.amazon.com/"
+  },
+  {
+    "brand": "Apple",
+    "official_domains": ["apple.com"],
+    "comparison_tokens": ["apple"],
+    "regions": ["global"],
+    "source": "https://www.apple.com/"
+  },
+  {
+    "brand": "Google",
+    "official_domains": ["google.com"],
+    "comparison_tokens": ["google"],
+    "regions": ["global"],
+    "source": "https://www.google.com/"
+  },
+  {
+    "brand": "Microsoft",
+    "official_domains": ["microsoft.com"],
+    "comparison_tokens": ["microsoft"],
+    "regions": ["global"],
+    "source": "https://www.microsoft.com/"
+  },
+  {
+    "brand": "Netflix",
+    "official_domains": ["netflix.com"],
+    "comparison_tokens": ["netflix"],
+    "regions": ["global"],
+    "source": "https://www.netflix.com/"
+  },
+  {
+    "brand": "Visa",
+    "official_domains": ["visa.com"],
+    "comparison_tokens": ["visa"],
+    "regions": ["global"],
+    "source": "https://www.visa.com/"
+  },
+  {
+    "brand": "Mastercard",
+    "official_domains": ["mastercard.com"],
+    "comparison_tokens": ["mastercard"],
+    "regions": ["global"],
+    "source": "https://www.mastercard.com/"
+  },
+  {
+    "brand": "UPS",
+    "official_domains": ["ups.com"],
+    "comparison_tokens": ["ups"],
+    "regions": ["global"],
+    "source": "https://www.ups.com/"
+  },
+  {
+    "brand": "FedEx",
+    "official_domains": ["fedex.com"],
+    "comparison_tokens": ["fedex"],
+    "regions": ["global"],
+    "source": "https://www.fedex.com/"
+  },
+  {
+    "brand": "DHL",
+    "official_domains": ["dhl.com"],
+    "comparison_tokens": ["dhl"],
+    "regions": ["global"],
+    "source": "https://www.dhl.com/"
+  },
+  {
+    "brand": "Internal Revenue Service",
+    "official_domains": ["irs.gov"],
+    "comparison_tokens": ["irs", "internalrevenueservice"],
+    "regions": ["north_america", "us"],
+    "source": "https://www.irs.gov/help/tax-scams"
+  },
+  {
+    "brand": "Social Security Administration",
+    "official_domains": ["ssa.gov"],
+    "comparison_tokens": ["ssa", "socialsecurity"],
+    "regions": ["north_america", "us"],
+    "source": "https://www.ssa.gov/scam/"
+  },
+  {
+    "brand": "Medicare",
+    "official_domains": ["medicare.gov"],
+    "comparison_tokens": ["medicare"],
+    "regions": ["north_america", "us"],
+    "source": "https://www.medicare.gov/"
+  },
+  {
+    "brand": "United States Postal Service",
+    "official_domains": ["usps.com"],
+    "comparison_tokens": ["usps", "postalservice"],
+    "regions": ["north_america", "us"],
+    "source": "https://www.usps.com/"
+  },
+  {
+    "brand": "Bank of America",
+    "official_domains": ["bankofamerica.com"],
+    "comparison_tokens": ["bankofamerica", "bofa"],
+    "regions": ["north_america", "us"],
+    "source": "https://www.bankofamerica.com/"
+  },
+  {
+    "brand": "Chase",
+    "official_domains": ["chase.com"],
+    "comparison_tokens": ["chase"],
+    "regions": ["north_america", "us"],
+    "source": "https://www.chase.com/"
+  },
+  {
+    "brand": "Wells Fargo",
+    "official_domains": ["wellsfargo.com"],
+    "comparison_tokens": ["wellsfargo"],
+    "regions": ["north_america", "us"],
+    "source": "https://www.wellsfargo.com/"
+  },
+  {
+    "brand": "Citi",
+    "official_domains": ["citi.com"],
+    "comparison_tokens": ["citi", "citibank"],
+    "regions": ["global", "north_america"],
+    "source": "https://www.citi.com/"
+  },
+  {
+    "brand": "Government of Canada / CRA",
+    "official_domains": ["canada.ca", "cra-arc.gc.ca"],
+    "comparison_tokens": ["cra", "canadarevenueagency", "servicecanada"],
+    "regions": ["north_america", "ca"],
+    "source": "https://www.canada.ca/en/revenue-agency/corporate/scams-fraud/recognize-scam.html"
+  },
+  {
+    "brand": "Canada Post",
+    "official_domains": ["canadapost-postescanada.ca"],
+    "comparison_tokens": ["canadapost", "postescanada"],
+    "regions": ["north_america", "ca"],
+    "source": "https://www.canadapost-postescanada.ca/"
+  },
+  {
+    "brand": "Royal Bank of Canada",
+    "official_domains": ["rbc.com", "rbcroyalbank.com"],
+    "comparison_tokens": ["rbc", "rbcroyalbank"],
+    "regions": ["north_america", "ca"],
+    "source": "https://www.rbc.com/"
+  },
+  {
+    "brand": "TD Bank",
+    "official_domains": ["td.com"],
+    "comparison_tokens": ["tdbank"],
+    "regions": ["north_america", "ca", "us"],
+    "source": "https://www.td.com/"
+  },
+  {
+    "brand": "HM Revenue and Customs",
+    "official_domains": ["hmrc.gov.uk"],
+    "comparison_tokens": ["hmrc"],
+    "regions": ["europe", "gb"],
+    "source": "https://www.gov.uk/government/organisations/hm-revenue-customs"
+  },
+  {
+    "brand": "UK Government",
+    "official_domains": ["gov.uk"],
+    "comparison_tokens": ["govuk", "ukgovernment"],
+    "regions": ["europe", "gb"],
+    "source": "https://www.gov.uk/"
+  },
+  {
+    "brand": "Royal Mail",
+    "official_domains": ["royalmail.com"],
+    "comparison_tokens": ["royalmail"],
+    "regions": ["europe", "gb"],
+    "source": "https://www.royalmail.com/help/scam-protection"
+  },
+  {
+    "brand": "NHS",
+    "official_domains": ["nhs.uk", "nhs.net"],
+    "comparison_tokens": ["nhs"],
+    "regions": ["europe", "gb"],
+    "source": "https://www.nhs.uk/"
+  },
+  {
+    "brand": "Australian Taxation Office",
+    "official_domains": ["ato.gov.au"],
+    "comparison_tokens": ["ato", "australiantaxationoffice"],
+    "regions": ["oceania", "au"],
+    "source": "https://www.ato.gov.au/"
+  },
+  {
+    "brand": "myGov Australia",
+    "official_domains": ["my.gov.au"],
+    "comparison_tokens": ["mygov"],
+    "regions": ["oceania", "au"],
+    "source": "https://my.gov.au/"
+  },
+  {
+    "brand": "Services Australia",
+    "official_domains": ["servicesaustralia.gov.au"],
+    "comparison_tokens": ["servicesaustralia", "centrelink"],
+    "regions": ["oceania", "au"],
+    "source": "https://www.servicesaustralia.gov.au/"
+  },
+  {
+    "brand": "Australia Post",
+    "official_domains": ["auspost.com.au"],
+    "comparison_tokens": ["auspost", "australiapost"],
+    "regions": ["oceania", "au"],
+    "source": "https://auspost.com.au/"
+  },
+  {
+    "brand": "European Union Institutions",
+    "official_domains": ["europa.eu"],
+    "comparison_tokens": ["europa", "europeanunion"],
+    "regions": ["europe", "eu"],
+    "source": "https://european-union.europa.eu/"
+  },
+  {
+    "brand": "La Poste",
+    "official_domains": ["laposte.fr"],
+    "comparison_tokens": ["laposte"],
+    "regions": ["europe", "fr"],
+    "source": "https://www.laposte.fr/"
+  },
+  {
+    "brand": "Deutsche Post",
+    "official_domains": ["deutschepost.de"],
+    "comparison_tokens": ["deutschepost"],
+    "regions": ["europe", "de"],
+    "source": "https://www.deutschepost.de/"
+  },
+  {
+    "brand": "Japan Post",
+    "official_domains": ["japanpost.jp"],
+    "comparison_tokens": ["japanpost"],
+    "regions": ["asia", "jp"],
+    "source": "https://www.japanpost.jp/"
+  },
+  {
+    "brand": "India Post",
+    "official_domains": ["indiapost.gov.in"],
+    "comparison_tokens": ["indiapost"],
+    "regions": ["asia", "in"],
+    "source": "https://www.indiapost.gov.in/"
+  },
+  {
+    "brand": "DBS",
+    "official_domains": ["dbs.com.sg", "dbs.com"],
+    "comparison_tokens": ["dbs"],
+    "regions": ["asia", "sg"],
+    "source": "https://www.dbs.com.sg/"
+  },
+  {
+    "brand": "OCBC",
+    "official_domains": ["ocbc.com"],
+    "comparison_tokens": ["ocbc"],
+    "regions": ["asia", "sg"],
+    "source": "https://www.ocbc.com/"
+  },
+  {
+    "brand": "UOB",
+    "official_domains": ["uob.com.sg"],
+    "comparison_tokens": ["uob"],
+    "regions": ["asia", "sg"],
+    "source": "https://www.uob.com.sg/"
+  },
+  {
+    "brand": "Singpass",
+    "official_domains": ["singpass.gov.sg"],
+    "comparison_tokens": ["singpass"],
+    "regions": ["asia", "sg"],
+    "source": "https://www.singpass.gov.sg/"
+  }
+]

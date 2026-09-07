@@ -64,13 +64,16 @@ Prompt-engineering, not infra — no new files. Feed it real scam examples *and*
 **Done when:** you've got a handful of test messages (obvious scams, obviously-fine ones, ambiguous ones) and the risk_level + reason look right for all of them.
 
 **3b — Domain-spoof check tool**
-**New file:** `app/tools/domain_check.py`
-Build a new Strands `@tool` (same pattern as `check_url_reputation` in `link_check.py`) that flags an email sender's domain as a lookalike of a well-known brand — e.g. `paypa1-verify.com` impersonating PayPal. No external API needed; this can be a heuristic (a short list of commonly-impersonated brand domains + some kind of similarity/typosquat check against the sender's domain). Then wire it into `app/agent.py`: add it to the agent's `tools=[...]` list, and add a line to `SYSTEM_PROMPT` telling the agent to use it for email senders.
-**Done when:** you've got a handful of real lookalike domains, real brand domains, and unrelated domains, and the tool's verdict is right for all of them.
+**Primary files:** `app/tools/domain_check.py`, `app/tools/email_auth.py`,
+`app/tools/domain_intelligence.py`, and `app/tools/reply_to_check.py`
+Build a Strands `@tool` that flags an email sender's domain as a lookalike of a well-known brand — e.g. `paypa1-verify.com` impersonating PayPal — using a source-linked global registry, Public Suffix List boundaries, Unicode confusable data, and deterministic typo/lookalike rules. Task 3b compares From and Reply-To domains, parses receiver-supplied SPF/DKIM/DMARC results, and can optionally inspect cached Brave Search candidates plus DNS, authoritative RDAP registration age, and Certificate Transparency metadata. External evidence never proves safety. Search-based registry updates go through a generated review proposal and an explicit approval command; they are never silently auto-trusted.
+**Done when:** global lookalike, official, unrelated, authentication, Reply-To, public-suffix, cached search, external-intelligence, and reviewed-registry-update cases pass offline tests and the Agent uses each result with the documented trust level.
+
+Contributor and deployment documentation: [`TASK_3B_EMAIL_SENDER_SECURITY.md`](TASK_3B_EMAIL_SENDER_SECURITY.md).
 
 ### Task 4 — Android → backend wiring
 **Files:** `app/src/main/java/com/scamguard/spike/sms/` and `.../email/` in the Android app (separate repo folder, not this one)
-Two things per module: (a) compute `is_known_sender` — SMS via `ContactsContract`, email via Gmail thread history/People API — and (b) POST the message to `/check-message` instead of just displaying it, then show the returned risk_level + reason in the UI.
+Two things per module: (a) compute `is_known_sender` — SMS via `ContactsContract`, email via Gmail thread history/People API — and (b) POST the message to `/check-message` instead of just displaying it, then show the returned risk_level + reason in the UI. For email, also forward the receiving provider's trusted `Authentication-Results` and `Reply-To` values when Gmail exposes them; both backend fields are optional for compatibility.
 **Done when:** sending yourself a test SMS/email shows a real verdict from the backend, not just the raw message.
 
 ### Task 5 — Confirm AWS Bedrock access ✅ done

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Local-dev-only: allows plain HTTP (not just HTTPS) so the app can reach the
+  ScamGuard backend running on a dev machine (10.0.2.2 for the emulator, or a
+  LAN IP for a physical device; see BackendConfig.kt). Android blocks
+  cleartext traffic by default since API 28. Fine for a hackathon spike
+  talking to localhost/LAN only; would need tightening (HTTPS, or scoping
+  this to just those hosts) before ever pointing at a real deployed backend.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
