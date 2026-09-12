@@ -32,10 +32,13 @@ import kotlinx.coroutines.launch
 /**
  * First-run sign-up: creates the protected person's row on the backend (username, phone
  * number, gmail) and, optionally, one family member to alert on risky messages (username,
- * phone number). If that family member doesn't already have a Telegram chat_id, this hands
- * off to TelegramLinkActivity to link one right away (optional -- SMS alerts via
- * GuardianAlerter work regardless). Shown by MainActivity whenever UserSession has no
- * stored user id yet.
+ * phone number) via on-device notification and SMS (GuardianAlerter). Shown by MainActivity
+ * whenever UserSession has no stored user id yet.
+ *
+ * Telegram linking (TelegramLinkActivity, backend/app/telegram_link.py) is built and
+ * tested but deliberately not wired in here -- SMS + on-device notification already cover
+ * alerting, and the team decided not to expose Telegram in the UI for now. The code is
+ * left in place rather than deleted in case that changes later.
  */
 class RegistrationActivity : ComponentActivity() {
 
@@ -98,22 +101,8 @@ class RegistrationActivity : ComponentActivity() {
                 // with no network round trip needed to look the number back up.
                 UserSession.setGuardianPhoneNumber(this@RegistrationActivity, familyPhoneNumber)
 
-                // telegramLinkCode is only present when the backend didn't already have a
-                // chat_id for this family member (the normal case) -- see
-                // backend/app/telegram_link.py. Route through the linking screen instead
-                // of straight to MainActivity so there's a chance to use it right away.
-                if (family.telegramLinkCode != null) {
-                    startActivity(
-                        Intent(this@RegistrationActivity, TelegramLinkActivity::class.java).apply {
-                            putExtra(TelegramLinkActivity.EXTRA_FAMILY_MEMBER_ID, family.id)
-                            putExtra(TelegramLinkActivity.EXTRA_LINK_CODE, family.telegramLinkCode)
-                            putExtra(TelegramLinkActivity.EXTRA_LINK_URL, family.telegramLinkUrl)
-                            putExtra(TelegramLinkActivity.EXTRA_GUARDIAN_USERNAME, familyUsername)
-                        }
-                    )
-                    finish()
-                    return@launch
-                }
+                // family.telegramLinkCode/telegramLinkUrl are intentionally unused here --
+                // see the class doc for why (Telegram linking isn't exposed in the UI).
             }
 
             startActivity(Intent(this@RegistrationActivity, MainActivity::class.java))

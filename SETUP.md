@@ -120,11 +120,11 @@ Both fire from the same three places a check can complete: `SmsListActivity`,
 `EmailListActivity`, and `checkAndPersist` (used by `PollSmsWorker`/`PollEmailWorker`), so
 alerts fire the same way whether the app is open or a background poll caught the message.
 
-Separately, the backend can also alert family over **Telegram** (`backend/app/alerts.py`).
-Registration now generates a one-time link code and hands off to `TelegramLinkActivity`,
-which shows a tappable `t.me/<bot>?start=<code>` deep link (or the raw code, if
-`TELEGRAM_BOT_USERNAME` isn't set) for the family member to send to the bot -- the app
-then confirms on demand whether their `telegram_chat_id` got linked. See
-`backend/app/telegram_link.py` and `backend/README.md` Task 2 for the full flow and what
-still needs a real bot token to actually send. The on-device notification and the SMS to
-the guardian both work independently of whether Telegram is set up at all.
+Telegram family alerts (`backend/app/telegram_link.py`, `backend/app/alerts.py`, and the
+Android `TelegramLinkActivity` screen) are built and tested but **not currently wired into
+the registration flow** -- a deliberate decision, since SMS + on-device notification
+already cover alerting and the team chose not to expose a third channel in the UI for now.
+The code is intentionally left in place rather than deleted; re-enabling it is just
+restoring the `TelegramLinkActivity` handoff in `RegistrationActivity.submit()`. See
+`backend/README.md` Task 2 for the full flow if picking this back up later. The on-device
+notification and the SMS to the guardian both work independently of any of this.
