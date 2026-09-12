@@ -34,11 +34,11 @@ import com.scamguard.spike.ui.theme.ScamGuardSpikeTheme
  */
 class MainActivity : ComponentActivity() {
 
-    // No-op callback either way: RiskNotifier checks NotificationManagerCompat's
-    // areNotificationsEnabled() before every notify() call, so a denial here just means
-    // those checks silently skip showing a notification rather than crashing.
-    private val notificationPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    // No-op callback either way: RiskNotifier/GuardianAlerter each re-check their own
+    // permission (areNotificationsEnabled() / SEND_SMS) before acting, so a denial here
+    // just means those checks silently skip rather than crash.
+    private val alertPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,18 +51,7 @@ class MainActivity : ComponentActivity() {
         }
 
         BackgroundMonitoring.schedule(this)
-
-        // POST_NOTIFICATIONS is only a runtime permission from API 33 (Tiramisu) on --
-        // below that, notifications just work once the channel exists. Asked here, once
-        // registration is confirmed, so it's covered before either the SMS or Email
-        // module first triggers a risky-message notification via RiskNotifier.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(
-                this, Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
+        requestMissingAlertPermissions()
 
         setContent {
             ScamGuardSpikeTheme {
@@ -74,6 +63,33 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+        }
+    }
+
+    // POST_NOTIFICATIONS is only a runtime permission from API 33 (Tiramisu) on -- below
+    // that, notifications just work once the channel exists. SEND_SMS is only asked for at
+    // all if a guardian was actually registered (see RegistrationActivity/UserSession) --
+    // no point prompting for it otherwise. Asked here, once registration is confirmed, so
+    // both are covered before the SMS/Email modules can first trigger an alert.
+    private fun requestMissingAlertPermissions() {
+        val missing = buildList {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(
+                    this@MainActivity, Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+            if (UserSession.getGuardianPhoneNumber(this@MainActivity) != null &&
+                ContextCompat.checkSelfPermission(
+                    this@MainActivity, Manifest.permission.SEND_SMS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                add(Manifest.permission.SEND_SMS)
+            }
+        }
+        if (missing.isNotEmpty()) {
+            alertPermissionLauncher.launch(missing.toTypedArray())
         }
     }
 }

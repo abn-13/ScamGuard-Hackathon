@@ -32,6 +32,7 @@ import com.scamguard.spike.backend.CheckState
 import com.scamguard.spike.backend.CheckStateLabel
 import com.scamguard.spike.backend.MessageSource
 import com.scamguard.spike.backend.ScamGuardApiClient
+import com.scamguard.spike.notifications.GuardianAlerter
 import com.scamguard.spike.notifications.RiskNotifier
 import com.scamguard.spike.registration.UserSession
 import com.scamguard.spike.ui.theme.ScamGuardSpikeTheme
@@ -185,6 +186,9 @@ class EmailListActivity : ComponentActivity() {
             if (result is CheckState.Done) {
                 checkedResults[item] = result
                 RiskNotifier.notifyIfRisky(
+                    this@EmailListActivity, MessageSource.EMAIL, item.sender, result.riskLevel, result.reason
+                )
+                GuardianAlerter.alertIfRisky(
                     this@EmailListActivity, MessageSource.EMAIL, item.sender, result.riskLevel, result.reason
                 )
             }

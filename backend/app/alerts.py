@@ -1,10 +1,7 @@
-import requests
 from sqlmodel import Session, select
 
-from .config import settings
 from .models import FamilyMember
-
-TELEGRAM_API = "https://api.telegram.org/bot{token}/sendMessage"
+from .telegram_link import send_telegram_message
 
 
 def send_family_alert(session: Session, user_id: int, sender: str, reason: str) -> None:
@@ -12,7 +9,10 @@ def send_family_alert(session: Session, user_id: int, sender: str, reason: str) 
 
     Best-effort: a delivery failure here (bad token, no network, Telegram down) should
     never blow up the /check-message response -- the message is already judged and
-    logged by the time this runs, that result matters more than the notification.
+    logged by the time this runs, that result matters more than the notification. Members
+    with no telegram_chat_id yet (never linked -- see app/telegram_link.py) are silently
+    skipped; the on-device notification and guardian SMS (Android side) don't depend on
+    this at all.
     """
     members = session.exec(
         select(FamilyMember).where(FamilyMember.user_id == user_id)
@@ -20,24 +20,9 @@ def send_family_alert(session: Session, user_id: int, sender: str, reason: str) 
     if not members:
         return
 
-    token = settings.telegram_bot_token
     text = f"⚠️ ScamGuard flagged a message.\nFrom: {sender}\nWhy: {reason}"
 
     for member in members:
         if not member.telegram_chat_id:
             continue
-        if not token:
-            # TODO(Task 2 owner): remove this stub once TELEGRAM_BOT_TOKEN is set in .env.
-            print(f"[alerts stub] would notify {member.username}: {text}")
-            continue
-        try:
-            response = requests.post(
-                TELEGRAM_API.format(token=token),
-                json={"chat_id": member.telegram_chat_id, "text": text},
-                timeout=10,
-            )
-            response.raise_for_status()
-        except requests.exceptions.RequestException as exc:
-            # Log and move on -- don't let one bad chat_id/token/network blip 500 the
-            # whole /check-message call, and don't stop notifying the other members.
-            print(f"[alerts] failed to notify {member.username}: {exc}")
+        send_telegram_message(member.telegram_chat_id, text)

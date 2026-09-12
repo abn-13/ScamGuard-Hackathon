@@ -51,10 +51,12 @@ Don't need to touch these unless something's actually broken:
 **File:** `app/tools/link_check.py`
 Reused the same Google Cloud project as the Gmail OAuth setup — just needed "Safe Browsing API" enabled + a plain API key (no OAuth needed for this one). Verified live: known test malware/phishing URLs come back "malicious," google.com comes back "clean," and a full `/check-message` call with a phishing email correctly returns high risk with the link result reflected in the reasoning.
 
-### Task 2 — Real Telegram family alerts
-**File:** `app/alerts.py`
-Create a bot via [@BotFather](https://t.me/BotFather) on Telegram (a couple of minutes, gives you a token). Set `TELEGRAM_BOT_TOKEN` in `.env`. Have a family member message the bot once, then hit `https://api.telegram.org/bot<TOKEN>/getUpdates` to read their chat ID out of the response. Register them via `POST /family-members`.
-**Done when:** a `/check-message` call that comes back medium/high risk actually messages that person on Telegram.
+### Task 2 — Real Telegram family alerts ✅ done (needs your own bot token to actually send)
+**Files:** `app/alerts.py`, `app/telegram_link.py`
+Linking is automated now -- no more manually reading a chat ID out of `getUpdates` and pasting it into Swagger. `POST /family-members` (without a `telegram_chat_id`) generates a one-time code and returns it plus a `https://t.me/<bot>?start=<code>` deep link (needs `TELEGRAM_BOT_USERNAME` set to build the link; the raw code still works without it). The family member sends that to the bot, and the Android app's linking screen calls `POST /family-members/{id}/link-telegram` on demand, which short-polls Telegram's `getUpdates` once and saves their `chat_id` if the code matches. `app/alerts.py` sends to any member who has one, same as before.
+
+To actually enable sending: create a bot via [@BotFather](https://t.me/BotFather) (a couple of minutes, gives you a token + username), set `TELEGRAM_BOT_TOKEN` (and optionally `TELEGRAM_BOT_USERNAME` for the deep link) in `.env`.
+**Done when:** a `/check-message` call that comes back medium/high risk actually messages that person on Telegram. (Separately, and already working without any of this: the Android app also texts the family member's phone directly and shows an on-device notification -- see `SETUP.md` § Risk alerts.)
 
 ### Task 3 — split across two people
 

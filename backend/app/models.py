@@ -33,9 +33,14 @@ class FamilyMember(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id")
     username: str
     phone_number: str
-    # Populated later (Task 2) once they've messaged the bot and their chat_id is
-    # known -- registration itself doesn't require them to have done that yet.
+    # Populated once they've messaged the bot with telegram_link_code and it's been
+    # matched (see app/telegram_link.py) -- registration itself doesn't require them to
+    # have done that yet.
     telegram_chat_id: Optional[str] = None
+    # Set at creation (see main.py::create_family_member) unless telegram_chat_id was
+    # already provided directly. Cleared once linking succeeds -- a spent code shouldn't
+    # match a future, unrelated /start message reusing the same text by coincidence.
+    telegram_link_code: Optional[str] = Field(default=None, index=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

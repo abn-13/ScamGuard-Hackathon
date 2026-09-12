@@ -32,8 +32,10 @@ import kotlinx.coroutines.launch
 /**
  * First-run sign-up: creates the protected person's row on the backend (username, phone
  * number, gmail) and, optionally, one family member to alert on risky messages (username,
- * phone number -- their Telegram chat_id is linked later, see backend Task 2). Shown by
- * MainActivity whenever UserSession has no stored user id yet.
+ * phone number). If that family member doesn't already have a Telegram chat_id, this hands
+ * off to TelegramLinkActivity to link one right away (optional -- SMS alerts via
+ * GuardianAlerter work regardless). Shown by MainActivity whenever UserSession has no
+ * stored user id yet.
  */
 class RegistrationActivity : ComponentActivity() {
 
@@ -80,7 +82,8 @@ class RegistrationActivity : ComponentActivity() {
                 val familyResult = ScamGuardApiClient.registerFamilyMember(
                     userId, familyUsername, familyPhoneNumber
                 )
-                if (familyResult.isFailure) {
+                val family = familyResult.getOrNull()
+                if (family == null) {
                     // The user account already exists at this point -- don't strand them on
                     // the registration screen over a family-member hiccup, just surface it.
                     isLoading = false
@@ -88,6 +91,27 @@ class RegistrationActivity : ComponentActivity() {
                         "Account created, but adding your family member failed: " +
                             "${familyResult.exceptionOrNull()?.message}. You can retry from " +
                             "the backend directly for now."
+                    return@launch
+                }
+                // Cached locally (not just sent to the backend) so GuardianAlerter can send
+                // an SMS straight from this device -- including from a background Worker,
+                // with no network round trip needed to look the number back up.
+                UserSession.setGuardianPhoneNumber(this@RegistrationActivity, familyPhoneNumber)
+
+                // telegramLinkCode is only present when the backend didn't already have a
+                // chat_id for this family member (the normal case) -- see
+                // backend/app/telegram_link.py. Route through the linking screen instead
+                // of straight to MainActivity so there's a chance to use it right away.
+                if (family.telegramLinkCode != null) {
+                    startActivity(
+                        Intent(this@RegistrationActivity, TelegramLinkActivity::class.java).apply {
+                            putExtra(TelegramLinkActivity.EXTRA_FAMILY_MEMBER_ID, family.id)
+                            putExtra(TelegramLinkActivity.EXTRA_LINK_CODE, family.telegramLinkCode)
+                            putExtra(TelegramLinkActivity.EXTRA_LINK_URL, family.telegramLinkUrl)
+                            putExtra(TelegramLinkActivity.EXTRA_GUARDIAN_USERNAME, familyUsername)
+                        }
+                    )
+                    finish()
                     return@launch
                 }
             }

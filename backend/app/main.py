@@ -11,9 +11,12 @@ from .models import FamilyMember, Message, RiskLevel, User
 from .schemas import (
     CheckResponse,
     FamilyMemberCreate,
+    FamilyMemberOut,
     IncomingMessage,
+    TelegramLinkStatus,
     UserCreate,
 )
+from .telegram_link import build_link_url, generate_link_code, poll_and_link_pending
 
 
 @asynccontextmanager
@@ -43,17 +46,46 @@ def create_user(payload: UserCreate, session: Session = Depends(get_session)):
     return user
 
 
-@app.post("/family-members")
+@app.post("/family-members", response_model=FamilyMemberOut)
 def create_family_member(
     payload: FamilyMemberCreate, session: Session = Depends(get_session)
 ):
     if not session.get(User, payload.user_id):
         raise HTTPException(status_code=404, detail=f"No user with id {payload.user_id}")
     member = FamilyMember(**payload.model_dump())
+    # Only needed if a chat_id wasn't already provided directly (e.g. a manual Swagger
+    # call already carrying one) -- see app/telegram_link.py for how this gets consumed.
+    if not member.telegram_chat_id:
+        member.telegram_link_code = generate_link_code()
     session.add(member)
     session.commit()
     session.refresh(member)
-    return member
+    return FamilyMemberOut(
+        **member.model_dump(),
+        telegram_link_url=build_link_url(member.telegram_link_code)
+        if member.telegram_link_code
+        else None,
+    )
+
+
+@app.post("/family-members/{family_member_id}/link-telegram", response_model=TelegramLinkStatus)
+def link_telegram(family_member_id: int, session: Session = Depends(get_session)):
+    """On-demand check: call this after the family member has sent their link code (or
+    tapped the deep link) to the bot. Short-polls Telegram once for new messages and links
+    this family member if their code shows up -- see app/telegram_link.py for why this is
+    on-demand rather than a continuous background poll.
+    """
+    member = session.get(FamilyMember, family_member_id)
+    if not member:
+        raise HTTPException(
+            status_code=404, detail=f"No family member with id {family_member_id}"
+        )
+    if member.telegram_chat_id:
+        return TelegramLinkStatus(linked=True)
+
+    poll_and_link_pending(session)
+    session.refresh(member)
+    return TelegramLinkStatus(linked=member.telegram_chat_id is not None)
 
 
 @app.post("/check-message", response_model=CheckResponse)

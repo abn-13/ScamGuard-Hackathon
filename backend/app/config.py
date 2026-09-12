@@ -25,6 +25,9 @@ class Settings:
     domain_intelligence_enabled: bool = _env_flag("DOMAIN_INTELLIGENCE_ENABLED")
     certspotter_api_token: Optional[str] = os.environ.get("CERTSPOTTER_API_TOKEN")
     telegram_bot_token: Optional[str] = os.environ.get("TELEGRAM_BOT_TOKEN")
+    # Only needed to build a tappable https://t.me/<username>?start=<code> link for the
+    # app to show; without it the app falls back to showing the raw code to send manually.
+    telegram_bot_username: Optional[str] = os.environ.get("TELEGRAM_BOT_USERNAME")
 
 
 settings = Settings()

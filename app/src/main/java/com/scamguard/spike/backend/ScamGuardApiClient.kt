@@ -25,6 +25,17 @@ sealed class CheckState {
 }
 
 /**
+ * Result of `POST /family-members`. telegramLinkCode/telegramLinkUrl are null once the
+ * chat_id was already supplied directly (not the normal registration path) -- see
+ * backend/app/telegram_link.py.
+ */
+data class FamilyMemberRegistration(
+    val id: Long,
+    val telegramLinkCode: String?,
+    val telegramLinkUrl: String?
+)
+
+/**
  * Talks to the backend's `POST /check-message` (see `backend/app/main.py` +
  * `backend/app/schemas.py::IncomingMessage`). Plain HttpURLConnection + org.json --
  * both already on the Android platform -- so this doesn't need a new HTTP dependency.
@@ -89,14 +100,32 @@ object ScamGuardApiClient {
         userId: Long,
         username: String,
         phoneNumber: String
-    ): Result<Unit> {
+    ): Result<FamilyMemberRegistration> {
         val payload = JSONObject().apply {
             put("user_id", userId)
             put("username", username)
             put("phone_number", phoneNumber)
         }
-        return postJson("/family-members", payload).map { }
+        return postJson("/family-members", payload).map {
+            FamilyMemberRegistration(
+                id = it.getLong("id"),
+                // isNull(), not optString(): org.json's optString returns the literal
+                // string "null" for a JSON null value, not Kotlin null -- isNull() is the
+                // one that treats "absent" and "explicit null" the same, correctly.
+                telegramLinkCode = if (it.isNull("telegram_link_code")) null else it.getString("telegram_link_code"),
+                telegramLinkUrl = if (it.isNull("telegram_link_url")) null else it.getString("telegram_link_url")
+            )
+        }
     }
+
+    /**
+     * On-demand check after the family member has sent their link code (or tapped the
+     * deep link) to the bot -- see backend/app/telegram_link.py for why this has to be a
+     * request the app triggers rather than something that "just happens" automatically.
+     */
+    suspend fun checkTelegramLink(familyMemberId: Long): Result<Boolean> =
+        postJson("/family-members/$familyMemberId/link-telegram", JSONObject())
+            .map { it.getBoolean("linked") }
 
     /** Shared POST-JSON plumbing -- every backend call here follows the same shape. */
     private suspend fun postJson(

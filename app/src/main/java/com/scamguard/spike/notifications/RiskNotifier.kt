@@ -22,11 +22,6 @@ object RiskNotifier {
 
     private const val CHANNEL_ID = "risk_alerts"
 
-    // Mirrors the backend's own threshold for alerting family over Telegram (see
-    // backend/app/main.py: `verdict.risk_level in (RiskLevel.medium, RiskLevel.high)`) so
-    // the on-device notification and the family alert fire for the same set of messages.
-    private val NOTIFY_LEVELS = setOf("medium", "high")
-
     // areNotificationsEnabled() below is the real runtime guard for POST_NOTIFICATIONS
     // (API 33+); lint can't see that from here, hence the suppression.
     @SuppressLint("MissingPermission")
@@ -37,7 +32,7 @@ object RiskNotifier {
         riskLevel: String,
         reason: String
     ) {
-        if (riskLevel.lowercase() !in NOTIFY_LEVELS) return
+        if (!isRiskyEnoughToAlert(riskLevel)) return
 
         ensureChannel(context)
 

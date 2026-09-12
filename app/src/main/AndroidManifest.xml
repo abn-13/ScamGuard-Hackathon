@@ -11,6 +11,10 @@
     <!-- Also SMS module: computes is_known_sender by looking up the sender in Contacts -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
 
+    <!-- Requested on first launch only if a guardian was registered (see MainActivity), so
+         GuardianAlerter can text them straight from this device on a medium/high risk hit. -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+
     <!-- Email module: Gmail API calls over the network via OAuth, not a device permission -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -43,6 +47,12 @@
 
         <activity
             android:name=".registration.RegistrationActivity"
+            android:exported="false"
+            android:label="@string/registration_screen_title"
+            android:theme="@style/Theme.ScamGuardSpike" />
+
+        <activity
+            android:name=".registration.TelegramLinkActivity"
             android:exported="false"
             android:label="@string/registration_screen_title"
             android:theme="@style/Theme.ScamGuardSpike" />
