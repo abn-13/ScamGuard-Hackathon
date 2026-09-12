@@ -1,8 +1,21 @@
 """Offline regression tests must not depend on operator credentials or network."""
 
 import socket
+import tempfile
+from pathlib import Path
 
 import pytest
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_configure(config):
+    if config.option.basetemp is None:
+        # Sandboxed and interactive Windows accounts can share TEMP and the
+        # reported username, but cannot access each other's mode-0700 pytest
+        # directories. Give each run its own freshly owned parent instead.
+        # The child does not exist, so pytest won't clear an existing directory.
+        parent = Path(tempfile.mkdtemp(prefix="scamguard-pytest-"))
+        config.option.basetemp = str(parent / "run")
 
 
 @pytest.fixture(autouse=True)

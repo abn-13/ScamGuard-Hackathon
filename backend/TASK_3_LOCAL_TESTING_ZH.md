@@ -54,6 +54,12 @@ python -m venv .venv
 测试会阻止对外 socket 连接，并给每个 API 测试单独建立临时数据库。Windows
 事件循环需要的本机回环连接仍允许。无需删除 `scamguard.db` 或 `test_scamguard.db`。
 
+如果之前遇到 `WinError 5`，且报错路径为 `Temp/pytest-of-Logan` 或
+`.pytest_cache`，原因是沙箱与普通 PowerShell 的执行账户不同，而共享了旧测试目录。
+现已改为每次在系统临时目录创建独立的 `scamguard-pytest-*` 目录，并禁用 pytest
+跨次缓存；重新运行同一条命令即可，无需管理员权限、修改 ACL 或删除旧目录。
+显式传入的 `--basetemp` 仍受尊重；不要把它指向已有数据目录，因为 pytest 会清空该路径。
+
 只运行本次重点测试：
 
 ~~~powershell
