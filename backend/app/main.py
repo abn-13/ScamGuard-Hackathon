@@ -32,7 +32,11 @@ def health():
 
 @app.post("/users")
 def create_user(payload: UserCreate, session: Session = Depends(get_session)):
-    user = User(display_name=payload.display_name)
+    user = User(
+        username=payload.username,
+        phone_number=payload.phone_number,
+        gmail=payload.gmail,
+    )
     session.add(user)
     session.commit()
     session.refresh(user)

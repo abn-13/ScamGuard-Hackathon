@@ -34,11 +34,13 @@ class CheckResponse(BaseModel):
 
 
 class UserCreate(BaseModel):
-    display_name: str
+    username: str
+    phone_number: str
+    gmail: str
 
 
 class FamilyMemberCreate(BaseModel):
     user_id: int
-    display_name: str
+    username: str
+    phone_number: str
     telegram_chat_id: Optional[str] = None
-    phone_number: Optional[str] = None

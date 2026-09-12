@@ -28,7 +28,7 @@ def send_family_alert(session: Session, user_id: int, sender: str, reason: str) 
             continue
         if not token:
             # TODO(Task 2 owner): remove this stub once TELEGRAM_BOT_TOKEN is set in .env.
-            print(f"[alerts stub] would notify {member.display_name}: {text}")
+            print(f"[alerts stub] would notify {member.username}: {text}")
             continue
         try:
             response = requests.post(
@@ -40,4 +40,4 @@ def send_family_alert(session: Session, user_id: int, sender: str, reason: str) 
         except requests.exceptions.RequestException as exc:
             # Log and move on -- don't let one bad chat_id/token/network blip 500 the
             # whole /check-message call, and don't stop notifying the other members.
-            print(f"[alerts] failed to notify {member.display_name}: {exc}")
+            print(f"[alerts] failed to notify {member.username}: {exc}")

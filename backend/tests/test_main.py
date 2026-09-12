@@ -27,7 +27,14 @@ def test_health(client):
 
 
 def test_check_message_flow_flags_high_risk_and_alerts_family(client):
-    user_resp = client.post("/users", json={"display_name": "Test Parent"})
+    user_resp = client.post(
+        "/users",
+        json={
+            "username": "test_parent",
+            "phone_number": "+15550000001",
+            "gmail": "test.parent@gmail.com",
+        },
+    )
     assert user_resp.status_code == 200
     user_id = user_resp.json()["id"]
 
@@ -35,7 +42,8 @@ def test_check_message_flow_flags_high_risk_and_alerts_family(client):
         "/family-members",
         json={
             "user_id": user_id,
-            "display_name": "Test Child",
+            "username": "test_child",
+            "phone_number": "+15550000002",
             "telegram_chat_id": "12345",
         },
     )
@@ -83,7 +91,14 @@ def test_check_message_unknown_user_returns_404(client):
 
 
 def test_email_accepts_optional_task3b_identity_headers(client):
-    user_resp = client.post("/users", json={"display_name": "Email Test User"})
+    user_resp = client.post(
+        "/users",
+        json={
+            "username": "email_test_user",
+            "phone_number": "+15550000003",
+            "gmail": "email.test.user@gmail.com",
+        },
+    )
     user_id = user_resp.json()["id"]
     fake_verdict = Verdict(risk_level=RiskLevel.low, reason="No strong warning found.")
 
