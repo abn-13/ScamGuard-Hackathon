@@ -1,6 +1,7 @@
 package com.scamguard.spike.backend
 
 import android.content.Context
+import com.scamguard.spike.notifications.GuardianAlerter
 import com.scamguard.spike.notifications.RiskNotifier
 import com.scamguard.spike.registration.UserSession
 
@@ -46,5 +47,6 @@ suspend fun checkAndPersist(
 
     store.put(key, result.riskLevel, result.reason)
     RiskNotifier.notifyIfRisky(context, source, sender, result.riskLevel, result.reason)
+    GuardianAlerter.alertIfRisky(context, source, sender, result.riskLevel, result.reason)
     return true
 }

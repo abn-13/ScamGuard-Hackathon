@@ -44,3 +44,20 @@ class FamilyMemberCreate(BaseModel):
     username: str
     phone_number: str
     telegram_chat_id: Optional[str] = None
+
+
+class FamilyMemberOut(BaseModel):
+    """FamilyMember plus a ready-to-tap Telegram deep link the app can show right after
+    registration -- telegram_link_url is computed (app/telegram_link.py), not a DB column."""
+
+    id: int
+    user_id: int
+    username: str
+    phone_number: str
+    telegram_chat_id: Optional[str] = None
+    telegram_link_code: Optional[str] = None
+    telegram_link_url: Optional[str] = None
+
+
+class TelegramLinkStatus(BaseModel):
+    linked: bool

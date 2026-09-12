@@ -100,6 +100,31 @@ that silent refresh will fail (it would need UI to re-consent, which a backgroun
 can't show) and the poll cycle is skipped until the user re-authorizes from the Email
 screen.
 
-Currently, checking a message doesn't alert the user on-device (no push notification) --
-that's separate in-progress work; it does still log/alert family via Telegram once
-that's configured (Task 2).
+## 7. Risk alerts
+
+When a check comes back medium or high risk, two things happen on-device (both in
+`app/src/main/java/com/scamguard/spike/notifications/`):
+
+- **`RiskNotifier`** shows a system notification on the protected person's own phone.
+  Requires the `POST_NOTIFICATIONS` permission on API 33+, requested once from
+  `MainActivity` after registration.
+- **`GuardianAlerter`** sends a real SMS to the registered family member's phone number
+  straight from this device via `SmsManager` -- no external SMS gateway or account
+  needed, since the number is already collected at registration (`RegistrationActivity`)
+  and cached locally via `UserSession` for background-Worker access. Requires the
+  `SEND_SMS` permission, requested alongside notifications, but only if a family member
+  was actually registered. Only fires if a family member was added during registration;
+  skips silently (no crash) if the permission was denied or no guardian is on file.
+
+Both fire from the same three places a check can complete: `SmsListActivity`,
+`EmailListActivity`, and `checkAndPersist` (used by `PollSmsWorker`/`PollEmailWorker`), so
+alerts fire the same way whether the app is open or a background poll caught the message.
+
+Separately, the backend can also alert family over **Telegram** (`backend/app/alerts.py`).
+Registration now generates a one-time link code and hands off to `TelegramLinkActivity`,
+which shows a tappable `t.me/<bot>?start=<code>` deep link (or the raw code, if
+`TELEGRAM_BOT_USERNAME` isn't set) for the family member to send to the bot -- the app
+then confirms on demand whether their `telegram_chat_id` got linked. See
+`backend/app/telegram_link.py` and `backend/README.md` Task 2 for the full flow and what
+still needs a real bot token to actually send. The on-device notification and the SMS to
+the guardian both work independently of whether Telegram is set up at all.

@@ -135,3 +135,116 @@ def test_email_accepts_optional_task3b_identity_headers(client):
     incoming = pipeline.call_args.args[0]
     assert incoming.reply_to == "help@support.example.com"
     assert "dmarc=pass" in incoming.authentication_results
+
+
+def test_create_family_member_without_chat_id_gets_a_link_code(client):
+    user_id = client.post(
+        "/users",
+        json={
+            "username": "telegram_test_parent",
+            "phone_number": "+15550000004",
+            "gmail": "telegram.parent@gmail.com",
+        },
+    ).json()["id"]
+
+    resp = client.post(
+        "/family-members",
+        json={
+            "user_id": user_id,
+            "username": "telegram_test_child",
+            "phone_number": "+15550000005",
+        },
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["telegram_chat_id"] is None
+    assert body["telegram_link_code"] is not None
+    assert len(body["telegram_link_code"]) == 8
+    # No TELEGRAM_BOT_USERNAME configured in the test environment -- the app is expected
+    # to fall back to showing the raw code rather than a deep link in that case.
+    assert body["telegram_link_url"] is None
+
+
+def test_family_member_created_with_chat_id_skips_link_code(client):
+    user_id = client.post(
+        "/users",
+        json={
+            "username": "telegram_test_parent2",
+            "phone_number": "+15550000006",
+            "gmail": "telegram.parent2@gmail.com",
+        },
+    ).json()["id"]
+
+    resp = client.post(
+        "/family-members",
+        json={
+            "user_id": user_id,
+            "username": "telegram_test_child2",
+            "phone_number": "+15550000007",
+            "telegram_chat_id": "555",
+        },
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["telegram_chat_id"] == "555"
+    assert body["telegram_link_code"] is None
+
+
+def test_link_telegram_already_linked_short_circuits_without_polling(client):
+    user_id = client.post(
+        "/users",
+        json={
+            "username": "telegram_test_parent3",
+            "phone_number": "+15550000008",
+            "gmail": "telegram.parent3@gmail.com",
+        },
+    ).json()["id"]
+    family_member_id = client.post(
+        "/family-members",
+        json={
+            "user_id": user_id,
+            "username": "telegram_test_child3",
+            "phone_number": "+15550000009",
+            "telegram_chat_id": "777",
+        },
+    ).json()["id"]
+
+    with patch("app.main.poll_and_link_pending") as poll:
+        resp = client.post(f"/family-members/{family_member_id}/link-telegram")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"linked": True}
+    poll.assert_not_called()  # already linked -- no need to hit Telegram at all
+
+
+def test_link_telegram_polls_and_reports_still_unlinked(client):
+    user_id = client.post(
+        "/users",
+        json={
+            "username": "telegram_test_parent4",
+            "phone_number": "+15550000010",
+            "gmail": "telegram.parent4@gmail.com",
+        },
+    ).json()["id"]
+    family_member_id = client.post(
+        "/family-members",
+        json={
+            "user_id": user_id,
+            "username": "telegram_test_child4",
+            "phone_number": "+15550000011",
+        },
+    ).json()["id"]
+
+    with patch("app.main.poll_and_link_pending", return_value=[]) as poll:
+        resp = client.post(f"/family-members/{family_member_id}/link-telegram")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"linked": False}
+    poll.assert_called_once()
+
+
+def test_link_telegram_unknown_family_member_returns_404(client):
+    resp = client.post("/family-members/999999/link-telegram")
+    assert resp.status_code == 404

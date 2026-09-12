@@ -31,6 +31,9 @@ class Settings:
         for value in os.environ.get("TRUSTED_AUTHSERV_IDS", "mx.google.com").split(",")
         if value.strip()
     )
+    # Only needed to build a tappable https://t.me/<username>?start=<code> link for the
+    # app to show; without it the app falls back to showing the raw code to send manually.
+    telegram_bot_username: Optional[str] = os.environ.get("TELEGRAM_BOT_USERNAME")
 
 
 settings = Settings()

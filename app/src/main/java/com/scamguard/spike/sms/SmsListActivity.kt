@@ -32,6 +32,7 @@ import com.scamguard.spike.backend.CheckStateLabel
 import com.scamguard.spike.backend.CheckedMessageStore
 import com.scamguard.spike.backend.MessageSource
 import com.scamguard.spike.backend.ScamGuardApiClient
+import com.scamguard.spike.notifications.GuardianAlerter
 import com.scamguard.spike.notifications.RiskNotifier
 import com.scamguard.spike.registration.UserSession
 import com.scamguard.spike.ui.theme.ScamGuardSpikeTheme
@@ -153,6 +154,9 @@ class SmsListActivity : ComponentActivity() {
                     checkedMessages.put(key, result.riskLevel, result.reason)
                 }
                 RiskNotifier.notifyIfRisky(
+                    this@SmsListActivity, MessageSource.SMS, item.sender, result.riskLevel, result.reason
+                )
+                GuardianAlerter.alertIfRisky(
                     this@SmsListActivity, MessageSource.SMS, item.sender, result.riskLevel, result.reason
                 )
             }
