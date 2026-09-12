@@ -32,6 +32,7 @@ import com.scamguard.spike.backend.CheckState
 import com.scamguard.spike.backend.CheckStateLabel
 import com.scamguard.spike.backend.MessageSource
 import com.scamguard.spike.backend.ScamGuardApiClient
+import com.scamguard.spike.notifications.RiskNotifier
 import com.scamguard.spike.registration.UserSession
 import com.scamguard.spike.ui.theme.ScamGuardSpikeTheme
 import java.time.Instant
@@ -181,7 +182,12 @@ class EmailListActivity : ComponentActivity() {
                 authenticationResults = item.authenticationResults
             )
             item.checkState.value = result
-            if (result is CheckState.Done) checkedResults[item] = result
+            if (result is CheckState.Done) {
+                checkedResults[item] = result
+                RiskNotifier.notifyIfRisky(
+                    this@EmailListActivity, MessageSource.EMAIL, item.sender, result.riskLevel, result.reason
+                )
+            }
         }
     }
 }

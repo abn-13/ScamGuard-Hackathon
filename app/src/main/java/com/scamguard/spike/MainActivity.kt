@@ -1,10 +1,14 @@
 package com.scamguard.spike
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.scamguard.spike.email.EmailListActivity
 import com.scamguard.spike.registration.RegistrationActivity
 import com.scamguard.spike.registration.UserSession
@@ -27,6 +32,13 @@ import com.scamguard.spike.ui.theme.ScamGuardSpikeTheme
  * independent feasibility-spike screens, each of which owns its own data access mechanism.
  */
 class MainActivity : ComponentActivity() {
+
+    // No-op callback either way: RiskNotifier checks NotificationManagerCompat's
+    // areNotificationsEnabled() before every notify() call, so a denial here just means
+    // those checks silently skip showing a notification rather than crashing.
+    private val notificationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -35,6 +47,18 @@ class MainActivity : ComponentActivity() {
             startActivity(Intent(this, RegistrationActivity::class.java))
             finish()
             return
+        }
+
+        // POST_NOTIFICATIONS is only a runtime permission from API 33 (Tiramisu) on --
+        // below that, notifications just work once the channel exists. Asked here, once
+        // registration is confirmed, so it's covered before either the SMS or Email
+        // module first triggers a risky-message notification via RiskNotifier.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                this, Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
 
         setContent {

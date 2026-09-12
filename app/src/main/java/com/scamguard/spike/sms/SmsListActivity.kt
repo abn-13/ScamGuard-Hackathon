@@ -33,6 +33,7 @@ import com.scamguard.spike.backend.CheckState
 import com.scamguard.spike.backend.CheckStateLabel
 import com.scamguard.spike.backend.MessageSource
 import com.scamguard.spike.backend.ScamGuardApiClient
+import com.scamguard.spike.notifications.RiskNotifier
 import com.scamguard.spike.registration.UserSession
 import com.scamguard.spike.ui.theme.ScamGuardSpikeTheme
 import java.time.Instant
@@ -170,7 +171,12 @@ class SmsListActivity : ComponentActivity() {
                 receivedAtMillis = item.timestampMillis
             )
             item.checkState.value = result
-            if (result is CheckState.Done) checkedResults[item] = result
+            if (result is CheckState.Done) {
+                checkedResults[item] = result
+                RiskNotifier.notifyIfRisky(
+                    this@SmsListActivity, MessageSource.SMS, item.sender, result.riskLevel, result.reason
+                )
+            }
         }
     }
 }
