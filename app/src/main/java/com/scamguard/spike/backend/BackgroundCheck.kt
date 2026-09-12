@@ -1,6 +1,7 @@
 package com.scamguard.spike.backend
 
 import android.content.Context
+import com.scamguard.spike.notifications.RiskNotifier
 import com.scamguard.spike.registration.UserSession
 
 /**
@@ -8,9 +9,6 @@ import com.scamguard.spike.registration.UserSession
  * silent-token-refresh question is resolved): checks one message against the backend and
  * persists the result, skipping it entirely if already checked. Pulled out as its own
  * function rather than duplicated per source, since both pollers need exactly this.
- *
- * Deliberately does NOT post a notification -- that's separate in-progress work. The
- * point where a medium/high risk_level becomes known is marked below.
  *
  * @return true if a check actually ran against the backend, false if skipped (already
  * checked, or no registered user yet).
@@ -47,8 +45,6 @@ suspend fun checkAndPersist(
     if (result !is CheckState.Done) return false
 
     store.put(key, result.riskLevel, result.reason)
-    // NOTE(teammate working on notifications): this is where a medium/high risk_level is
-    // known and the user could be alerted on-device. result.riskLevel / result.reason /
-    // sender are all available here.
+    RiskNotifier.notifyIfRisky(context, source, sender, result.riskLevel, result.reason)
     return true
 }
