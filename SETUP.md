@@ -44,22 +44,24 @@ Open the Email screen, tap "Authorize Gmail access", pick the Google account you
 
 ## 5. Backend integration (Task 4)
 
-Both screens now POST every message to the backend's `/check-message` and show the
+Both screens POST every message to the backend's `/check-message` and show the
 returned risk level + reason under each item ("Checking with ScamGuard…" while in
 flight). To make that work:
 
 1. **Run the backend** (see `backend/README.md`) — `uvicorn app.main:app --reload`,
    default port 8000.
-2. **Create a user** once against your local DB: open **http://localhost:8000/docs**
-   → `POST /users` → any `display_name` → note the returned `id`.
-3. **Point the app at your backend + that user id**: edit
-   `app/src/main/java/com/scamguard/spike/backend/BackendConfig.kt`.
-   - `BASE_URL` defaults to `http://10.0.2.2:8000`, which is the Android emulator's
-     alias for your machine's `localhost` — works out of the box for the emulator.
-     Testing on a **physical device**? Use your machine's LAN IP instead (device and
-     machine must be on the same Wi-Fi), e.g. `http://192.168.1.23:8000`.
-   - `USER_ID` defaults to `1`, i.e. the id you get from the very first user created
-     against a fresh DB. Change it if yours came back different.
+2. **Point the app at your backend**: `app/src/main/java/com/scamguard/spike/backend/BackendConfig.kt`
+   → `BASE_URL` defaults to `http://10.0.2.2:8000`, which is the Android emulator's
+   alias for your machine's `localhost` — works out of the box for the emulator.
+   Testing on a **physical device**? Use your machine's LAN IP instead (device and
+   machine must be on the same Wi-Fi), e.g. `http://192.168.1.23:8000`.
+3. **Sign up on first launch**: the app now shows a registration screen the first time
+   it runs on a device (username/phone/gmail, plus an optional family member to alert).
+   Submitting it calls `POST /users` (and `POST /family-members` if filled in) and
+   stores the returned `user_id` on-device via `UserSession` — no manual Swagger-UI
+   step or hardcoded id needed anymore. It only asks once; subsequent launches skip
+   straight to the home screen. To re-trigger it (e.g. to register as a different
+   user), clear the app's data or uninstall/reinstall.
 4. Grant the extra **Contacts** permission when prompted on the SMS screen — it's now
    requested alongside SMS access, used to compute `is_known_sender`.
 

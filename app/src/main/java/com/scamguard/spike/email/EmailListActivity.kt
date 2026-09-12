@@ -32,6 +32,7 @@ import com.scamguard.spike.backend.CheckState
 import com.scamguard.spike.backend.CheckStateLabel
 import com.scamguard.spike.backend.MessageSource
 import com.scamguard.spike.backend.ScamGuardApiClient
+import com.scamguard.spike.registration.UserSession
 import com.scamguard.spike.ui.theme.ScamGuardSpikeTheme
 import java.time.Instant
 import java.time.ZoneId
@@ -163,7 +164,13 @@ class EmailListActivity : ComponentActivity() {
         }
         item.checkState.value = CheckState.Checking
         lifecycleScope.launch {
+            val userId = UserSession.getUserId(this@EmailListActivity)
+            if (userId == null) {
+                item.checkState.value = CheckState.Failed("Not registered yet")
+                return@launch
+            }
             val result = ScamGuardApiClient.checkMessage(
+                userId = userId,
                 source = MessageSource.EMAIL,
                 sender = item.sender,
                 bodyText = item.bodyText,

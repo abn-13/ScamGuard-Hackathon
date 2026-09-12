@@ -35,6 +35,12 @@
         </activity>
 
         <activity
+            android:name=".registration.RegistrationActivity"
+            android:exported="false"
+            android:label="@string/registration_screen_title"
+            android:theme="@style/Theme.ScamGuardSpike" />
+
+        <activity
             android:name=".sms.SmsListActivity"
             android:exported="false"
             android:label="@string/sms_screen_title"

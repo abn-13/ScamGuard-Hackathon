@@ -33,6 +33,7 @@ import com.scamguard.spike.backend.CheckState
 import com.scamguard.spike.backend.CheckStateLabel
 import com.scamguard.spike.backend.MessageSource
 import com.scamguard.spike.backend.ScamGuardApiClient
+import com.scamguard.spike.registration.UserSession
 import com.scamguard.spike.ui.theme.ScamGuardSpikeTheme
 import java.time.Instant
 import java.time.ZoneId
@@ -152,10 +153,16 @@ class SmsListActivity : ComponentActivity() {
         }
         item.checkState.value = CheckState.Checking
         lifecycleScope.launch {
+            val userId = UserSession.getUserId(this@SmsListActivity)
+            if (userId == null) {
+                item.checkState.value = CheckState.Failed("Not registered yet")
+                return@launch
+            }
             val isKnown = withContext(Dispatchers.IO) {
                 ContactLookup.isKnownSender(this@SmsListActivity, item.sender)
             }
             val result = ScamGuardApiClient.checkMessage(
+                userId = userId,
                 source = MessageSource.SMS,
                 sender = item.sender,
                 bodyText = item.body,

@@ -17,6 +17,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.scamguard.spike.email.EmailListActivity
+import com.scamguard.spike.registration.RegistrationActivity
+import com.scamguard.spike.registration.UserSession
 import com.scamguard.spike.sms.SmsListActivity
 import com.scamguard.spike.ui.theme.ScamGuardSpikeTheme
 
@@ -28,6 +30,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        if (!UserSession.isRegistered(this)) {
+            startActivity(Intent(this, RegistrationActivity::class.java))
+            finish()
+            return
+        }
+
         setContent {
             ScamGuardSpikeTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
