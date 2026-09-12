@@ -58,10 +58,12 @@ Create a bot via [@BotFather](https://t.me/BotFather) on Telegram (a couple of m
 
 ### Task 3 — split across two people
 
-**3a — Reasoning prompt quality**
+**3a — Reasoning prompt quality — local implementation complete; live acceptance pending**
 **File:** `app/agent.py` (the `SYSTEM_PROMPT` string)
-Prompt-engineering, not infra — no new files. Feed it real scam examples *and* real legitimate messages (so it doesn't cry wolf on normal OTPs/delivery notices), and tune the wording until verdicts look right.
+The prompt now defines low/medium/high risk, distinguishes normal OTP delivery from credential requests, handles conflicting evidence conservatively, and treats message content as untrusted data. Local evaluation includes 24 synthetic cases, an optional real-Bedrock runner, and the saved baseline prompt. These fixtures are regression scenarios, not a substitute for reviewed real messages.
 **Done when:** you've got a handful of test messages (obvious scams, obviously-fine ones, ambiguous ones) and the risk_level + reason look right for all of them.
+
+Run `python -m evaluations.task3_eval` for offline evidence checks. With team AWS access, run `python -m evaluations.task3_eval --live --repeat 3` and review both risk and explanation quality. Reports do not mark live acceptance complete automatically. Full local instructions and remaining acceptance work: [Task 3 local testing guide](TASK_3_LOCAL_TESTING_ZH.md).
 
 **3b — Domain-spoof check tool**
 **Primary files:** `app/tools/domain_check.py`, `app/tools/email_auth.py`,
@@ -70,6 +72,8 @@ Build a Strands `@tool` that flags an email sender's domain as a lookalike of a 
 **Done when:** global lookalike, official, unrelated, authentication, Reply-To, public-suffix, cached search, external-intelligence, and reviewed-registry-update cases pass offline tests and the Agent uses each result with the documented trust level.
 
 Contributor and deployment documentation: [`TASK_3B_EMAIL_SENDER_SECURITY.md`](TASK_3B_EMAIL_SENDER_SECURITY.md).
+
+Local follow-up: receiver IDs are checked against `TRUSTED_AUTHSERV_IDS`; multiple DKIM results are preserved; incomplete, conflicting, or errored DMARC evidence is neutral. Gmail intake selects a single matching outer receiver header rather than trusting the first header's position. Live Gmail provenance still needs team end-to-end verification.
 
 ### Task 4 — Android → backend wiring
 **Files:** `app/src/main/java/com/scamguard/spike/sms/` and `.../email/` in the Android app (separate repo folder, not this one)

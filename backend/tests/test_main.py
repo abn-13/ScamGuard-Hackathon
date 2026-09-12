@@ -1,9 +1,6 @@
-import os
 from unittest.mock import patch
 
 import pytest
-
-os.environ["DATABASE_URL"] = "sqlite:///./test_scamguard.db"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -13,11 +10,25 @@ from app.models import RiskLevel  # noqa: E402
 
 
 @pytest.fixture()
-def client():
+def client(monkeypatch, tmp_path):
+    from sqlmodel import create_engine
+    from app import db, main
+
+    # Patch both references: main also opens short-lived sessions directly.
+    # A fresh database per test avoids import-order leaks and old local schemas.
+    test_engine = create_engine(
+        f"sqlite:///{(tmp_path / 'test.db').as_posix()}",
+        connect_args={"check_same_thread": False},
+    )
+    monkeypatch.setattr(db, "engine", test_engine)
+    monkeypatch.setattr(main, "engine", test_engine)
     # Lifespan (which creates the DB tables) only runs when TestClient is
     # used as a context manager -- a plain TestClient(app) skips it.
-    with TestClient(app) as c:
-        yield c
+    try:
+        with TestClient(app) as c:
+            yield c
+    finally:
+        test_engine.dispose()
 
 
 def test_health(client):
@@ -111,7 +122,7 @@ def test_email_accepts_optional_task3b_identity_headers(client):
                 "sender": "Notice <notice@example.com>",
                 "reply_to": "help@support.example.com",
                 "authentication_results": (
-                    "mx.example; spf=pass; dkim=pass; "
+                    "mx.google.com; spf=pass; dkim=pass; "
                     "dmarc=pass header.from=example.com"
                 ),
                 "body_text": "A routine account notice.",

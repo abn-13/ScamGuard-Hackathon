@@ -17,3 +17,4 @@ backend/**/__pycache__
 backend/.pytest_cache
 backend/*.db
 backend/.env
+backend/reports/

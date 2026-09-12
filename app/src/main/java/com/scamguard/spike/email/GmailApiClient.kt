@@ -73,11 +73,11 @@ object GmailApiClient {
                     isKnownSender = threadMessageCount > 1,
                     // Backend Task 3b evidence (both optional/backward-compatible):
                     replyTo = findHeader(headers, "Reply-To"),
-                    // A message can carry more than one Authentication-Results header
-                    // (one per hop); headers are listed newest-first, so the first match
-                    // is the one Gmail's own receiving MTA stamped -- the trusted value
-                    // Task 3b requires, as opposed to one copied from forwarded body text.
-                    authenticationResults = findHeader(headers, "Authentication-Results")
+                    // Only inspect outer Gmail API headers. Never assume the first
+                    // occurrence is trusted; ambiguous receiving-service claims are omitted.
+                    authenticationResults = GmailAuthenticationHeaders.select(
+                        headers.map { it.name.orEmpty() to it.value.orEmpty() }
+                    )
                 )
             }
 

@@ -25,6 +25,12 @@ class Settings:
     domain_intelligence_enabled: bool = _env_flag("DOMAIN_INTELLIGENCE_ENABLED")
     certspotter_api_token: Optional[str] = os.environ.get("CERTSPOTTER_API_TOKEN")
     telegram_bot_token: Optional[str] = os.environ.get("TELEGRAM_BOT_TOKEN")
+    # Match exact receiving-service IDs; this is a filter, not proof of origin.
+    trusted_authserv_ids: tuple[str, ...] = tuple(
+        value.strip().lower()
+        for value in os.environ.get("TRUSTED_AUTHSERV_IDS", "mx.google.com").split(",")
+        if value.strip()
+    )
 
 
 settings = Settings()

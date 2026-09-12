@@ -5,9 +5,10 @@ deterministic offline checks with optional, explicitly enabled network
 enrichment so the reasoning agent can identify brand impersonation without
 treating any single signal as proof that a message is safe.
 
-> **Project status:** application-ready local implementation. The code and
+> **Project status:** local implementation with offline regression coverage. The code and
 > offline tests do not require AWS, Brave Search, DNS, RDAP, or Certificate
 > Transparency access. Real Gmail ingestion remains part of Task 4.
+> Local completion changes and current test results: [Task 3 testing guide](TASK_3_LOCAL_TESTING_ZH.md).
 
 ## Contents
 
@@ -38,8 +39,9 @@ treating any single signal as proof that a message is safe.
   including multi-label and private suffixes.
 - Compares From and Reply-To domains as a conservative weak signal.
 - Parses receiver-generated SPF, DKIM, and DMARC results.
-- Refuses to apply an authentication result whose `header.from` does not align
-  with the visible sender's registrable domain.
+- Refuses to apply an authentication result whose `header.from` does not
+  exactly match the normalized visible sender domain. This association check
+  is distinct from SPF/DKIM organizational alignment already performed by DMARC.
 - Enforces at least medium risk when a deterministic lookalike or a validly
   associated authentication failure would otherwise receive a low verdict.
 
@@ -97,6 +99,8 @@ The architecture intentionally separates:
 | Associated DMARC failure | Strong sender-forgery evidence | Minimum medium risk |
 | DMARC pass | The receiver reports authorized use of the From domain | Does not validate content or links |
 | Misaligned `header.from` | Authentication data belongs to another sender domain | Authentication result is ignored |
+| Unapproved receiver ID, missing/duplicate `header.from`, duplicate DMARC, or DMARC error | Evidence cannot be reliably applied | Neutral; no risk floor |
+| Multiple DKIM signatures | All results retained; any pass is preserved | SPF/DKIM alone do not authenticate visible From |
 | Reply-To mismatch | Possible redirection to another organization | Weak signal only |
 | Newly registered domain | Common supporting signal in short-lived campaigns | Moderate evidence for agent reasoning |
 | NXDOMAIN | Domain does not currently exist in DNS | Moderate evidence for agent reasoning |
@@ -117,7 +121,7 @@ backward-compatible email fields:
   "subject": "Account verification required",
   "body_text": "Review your account using the link below.",
   "reply_to": "claims@example.net",
-  "authentication_results": "mx.receiver.example; spf=fail; dkim=fail; dmarc=fail header.from=paypa1-verify.com",
+  "authentication_results": "mx.google.com; spf=fail; dkim=fail; dmarc=fail header.from=paypa1-verify.com",
   "is_known_sender": false,
   "received_at": "2026-09-06T00:00:00Z"
 }
@@ -140,6 +144,20 @@ message metadata. Do not accept a same-named header copied from forwarded body
 text, an attachment, or another untrusted nested message. Task 4 is responsible
 for selecting and forwarding the correct Gmail metadata.
 
+Gmail intake now accepts only a single outer `Authentication-Results` value
+claiming `mx.google.com` (optional version 1). Multiple matching headers are
+omitted, independent of ordering. Backend `TRUSTED_AUTHSERV_IDS` defaults to
+`mx.google.com` and filters unexpected service IDs. A matching string is not
+cryptographic provenance: this depends on authenticated Gmail retrieval and
+receiver-side header sanitization. Arbitrary callers of the existing API can
+still invent headers; deployment API access control is outside Task 3. Verify
+real Gmail forwarding/duplicate-header cases before treating this as accepted.
+
+Parsing supports a bounded RFC 8601 subset with nested comments, folded lines,
+quoted properties and multiple DKIM results. Unsupported/malformed inputs are
+neutral. Only a single associated DMARC `fail` triggers the authentication risk
+floor; `permerror`, `temperror`, and SPF/DKIM failures without DMARC are neutral.
+
 ## Configuration
 
 Copy `.env.example` to a local `.env` and configure only the services needed by
@@ -149,6 +167,7 @@ the deployment. Never commit `.env` or real credentials.
 |---|---:|---|---|
 | `BRAVE_SEARCH_API_KEY` | No | unset | Enables unknown-brand website candidate search |
 | `DOMAIN_INTELLIGENCE_ENABLED` | No | `false` | Explicitly permits outbound DNS, RDAP, and CT queries |
+| `TRUSTED_AUTHSERV_IDS` | No | `mx.google.com` | Comma-separated exact receiving-service IDs; requires a separately trusted intake |
 | `CERTSPOTTER_API_TOKEN` | No | unset | Adds authenticated Cert Spotter capacity for production use |
 | `BEDROCK_MODEL_ID` | For the full agent | repository example | Selects the Bedrock reasoning model |
 | `AWS_REGION` | For the full agent | `us-east-1` | Bedrock region |
@@ -200,11 +219,10 @@ Run the complete backend regression suite:
 python -m pytest -q
 ```
 
-At the time of this document, the expected results are:
-
-- Task 3B focused suite: **96 passed**.
-- Complete backend suite: **100 passed**, with two unrelated dependency
-  deprecation warnings.
+The original baseline had 96 focused tests and 100 backend tests. For current
+counts and validation evidence, see [Task 3 testing guide](TASK_3_LOCAL_TESTING_ZH.md).
+Tests now use fresh temporary databases and block outbound socket connections
+(Windows event-loop connections on localhost remain allowed).
 
 Optional live check after explicit opt-in:
 
