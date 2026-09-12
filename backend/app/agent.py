@@ -1,5 +1,4 @@
 import json
-from typing import Optional
 
 from pydantic import BaseModel, Field
 from strands import Agent
@@ -98,8 +97,6 @@ say "blocked" or "flagged" with no reason.
 # scam examples *and* real legitimate messages so it doesn't cry wolf, and
 # adjust the wording above until verdicts look right for both.
 
-_agent: Optional[Agent] = None
-
 
 def _build_agent() -> Agent:
     if not settings.bedrock_model_id:
@@ -122,10 +119,12 @@ def _build_agent() -> Agent:
 
 
 def get_agent() -> Agent:
-    global _agent
-    if _agent is None:
-        _agent = _build_agent()
-    return _agent
+    """A fresh Agent per call, deliberately not cached/shared -- a Strands Agent
+    holds per-invocation state and can't handle concurrent calls on the same
+    instance. Building one is cheap (no network call happens until it's actually
+    invoked), so this lets concurrent /check-message requests run independently
+    instead of queuing behind a shared, single-flight instance."""
+    return _build_agent()
 
 
 def _apply_sender_identity_floor(
