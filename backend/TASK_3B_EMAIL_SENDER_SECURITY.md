@@ -8,7 +8,6 @@ treating any single signal as proof that a message is safe.
 > **Project status:** local implementation with offline regression coverage. The code and
 > offline tests do not require AWS, Brave Search, DNS, RDAP, or Certificate
 > Transparency access. Real Gmail ingestion remains part of Task 4.
-> Local completion changes and current test results: [Task 3 testing guide](TASK_3_LOCAL_TESTING_ZH.md).
 
 ## Contents
 
@@ -219,10 +218,10 @@ Run the complete backend regression suite:
 python -m pytest -q
 ```
 
-The original baseline had 96 focused tests and 100 backend tests. For current
-counts and validation evidence, see [Task 3 testing guide](TASK_3_LOCAL_TESTING_ZH.md).
-Tests now use fresh temporary databases and block outbound socket connections
-(Windows event-loop connections on localhost remain allowed).
+The focused and full regression suites cover deterministic sender-domain,
+authentication, Agent-integration, and API paths. Tests use fresh temporary
+databases and block outbound socket connections (Windows event-loop connections
+on localhost remain allowed).
 
 Optional live check after explicit opt-in:
 

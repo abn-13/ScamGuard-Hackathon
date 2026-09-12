@@ -63,7 +63,7 @@ Create a bot via [@BotFather](https://t.me/BotFather) on Telegram (a couple of m
 The prompt now defines low/medium/high risk, distinguishes normal OTP delivery from credential requests, handles conflicting evidence conservatively, and treats message content as untrusted data. Local evaluation includes 24 synthetic cases, an optional real-Bedrock runner, and the saved baseline prompt. These fixtures are regression scenarios, not a substitute for reviewed real messages.
 **Done when:** you've got a handful of test messages (obvious scams, obviously-fine ones, ambiguous ones) and the risk_level + reason look right for all of them.
 
-Run `python -m evaluations.task3_eval` for offline evidence checks. With team AWS access, run `python -m evaluations.task3_eval --live --repeat 3` and review both risk and explanation quality. Reports do not mark live acceptance complete automatically. Full local instructions and remaining acceptance work: [Task 3 local testing guide](TASK_3_LOCAL_TESTING_ZH.md).
+Run `python -m evaluations.task3_eval` for offline evidence checks. With team AWS access, run `python -m evaluations.task3_eval --live --repeat 3` and review both risk and explanation quality. Reports do not mark live acceptance complete automatically.
 
 **3b — Domain-spoof check tool**
 **Primary files:** `app/tools/domain_check.py`, `app/tools/email_auth.py`,
