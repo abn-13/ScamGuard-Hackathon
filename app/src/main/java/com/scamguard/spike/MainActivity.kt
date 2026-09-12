@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.scamguard.spike.backend.BackgroundMonitoring
 import com.scamguard.spike.email.EmailListActivity
 import com.scamguard.spike.registration.RegistrationActivity
 import com.scamguard.spike.registration.UserSession
@@ -48,6 +49,8 @@ class MainActivity : ComponentActivity() {
             finish()
             return
         }
+
+        BackgroundMonitoring.schedule(this)
 
         // POST_NOTIFICATIONS is only a runtime permission from API 33 (Tiramisu) on --
         // below that, notifications just work once the channel exists. Asked here, once

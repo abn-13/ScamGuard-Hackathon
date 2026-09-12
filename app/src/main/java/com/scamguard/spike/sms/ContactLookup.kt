@@ -6,7 +6,7 @@ import android.provider.ContactsContract
 
 /**
  * Computes `is_known_sender` for SMS: is this address already a saved contact?
- * Requires READ_CONTACTS (requested alongside READ_SMS/RECEIVE_SMS in SmsListActivity).
+ * Requires READ_CONTACTS (requested alongside READ_SMS in SmsListActivity).
  */
 object ContactLookup {
 

@@ -13,6 +13,7 @@ googleApiClient = "2.9.1"
 googleApiServicesGmail = "v1-rev20260727-2.0.0"
 googleHttpClientGson = "2.2.0"
 coroutinesAndroid = "1.11.0"
+workRuntimeKtx = "2.10.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -34,6 +35,7 @@ google-api-client = { group = "com.google.api-client", name = "google-api-client
 google-api-services-gmail = { group = "com.google.apis", name = "google-api-services-gmail", version.ref = "googleApiServicesGmail" }
 google-http-client-gson = { group = "com.google.http-client", name = "google-http-client-gson", version.ref = "googleHttpClientGson" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutinesAndroid" }
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntimeKtx" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

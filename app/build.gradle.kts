@@ -73,6 +73,7 @@ dependencies {
     // Email module: Google Sign-In + Gmail API (OAuth, not an Android permission)
     implementation(libs.play.services.auth)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.google.api.client) {
         exclude(group = "org.apache.httpcomponents")
     }
