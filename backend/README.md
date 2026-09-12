@@ -60,10 +60,12 @@ To actually enable sending: create a bot via [@BotFather](https://t.me/BotFather
 
 ### Task 3 — split across two people
 
-**3a — Reasoning prompt quality — local implementation complete; live acceptance pending**
+**3a — Reasoning prompt quality ✅ live-verified**
 **File:** `app/agent.py` (the `SYSTEM_PROMPT` string)
 The prompt now defines low/medium/high risk, distinguishes normal OTP delivery from credential requests, handles conflicting evidence conservatively, and treats message content as untrusted data. Local evaluation includes 24 synthetic cases, an optional real-Bedrock runner, and the saved baseline prompt. These fixtures are regression scenarios, not a substitute for reviewed real messages.
 **Done when:** you've got a handful of test messages (obvious scams, obviously-fine ones, ambiguous ones) and the risk_level + reason look right for all of them.
+
+Ran live against Bedrock (2026-09-13) both with this prompt and with `--baseline` (the pre-hardening prompt) for a direct before/after: match rate went from 21/24 (87.5%) to 23/24 (95.8%), and the one legitimate message the old prompt wrongly flagged (a known contact's repayment request, incorrectly called "medium") is now correctly "low." The one remaining miss in the new prompt is an ambiguous case rated "high" instead of the expected "medium" — over-cautious, the safe direction to err. Real synthetic cases only; a de-identified real-message dataset is still a good next step before fully trusting this day-to-day.
 
 Run `python -m evaluations.task3_eval` for offline evidence checks. With team AWS access, run `python -m evaluations.task3_eval --live --repeat 3` and review both risk and explanation quality. Reports do not mark live acceptance complete automatically.
 
@@ -77,10 +79,12 @@ Contributor and deployment documentation: [`TASK_3B_EMAIL_SENDER_SECURITY.md`](T
 
 Local follow-up: receiver IDs are checked against `TRUSTED_AUTHSERV_IDS`; multiple DKIM results are preserved; incomplete, conflicting, or errored DMARC evidence is neutral. Gmail intake selects a single matching outer receiver header rather than trusting the first header's position. Live Gmail provenance still needs team end-to-end verification.
 
-### Task 4 — Android → backend wiring
+### Task 4 — Android → backend wiring ✅ done
 **Files:** `app/src/main/java/com/scamguard/spike/sms/` and `.../email/` in the Android app (separate repo folder, not this one)
 Two things per module: (a) compute `is_known_sender` — SMS via `ContactsContract`, email via Gmail thread history/People API — and (b) POST the message to `/check-message` instead of just displaying it, then show the returned risk_level + reason in the UI. For email, also forward the receiving provider's trusted `Authentication-Results` and `Reply-To` values when Gmail exposes them; both backend fields are optional for compatibility.
 **Done when:** sending yourself a test SMS/email shows a real verdict from the backend, not just the raw message.
+
+Verified live, repeatedly: both screens show a real verdict, and both SMS and email are now also checked automatically in the background (`PollSmsWorker`/`PollEmailWorker`, see `SETUP.md` § Background monitoring) with a real on-device notification and a real SMS to the registered family member when something's flagged (`RiskNotifier`/`GuardianAlerter`, see `SETUP.md` § Risk alerts).
 
 ### Task 5 — Confirm AWS Bedrock access ✅ done
 Verified working on the team account (`us-east-1`) with `BEDROCK_MODEL_ID=us.anthropic.claude-haiku-4-5-20251001-v1:0` — already the default in `.env.example`. If you're using `aws login` instead of a static IAM key, make sure `botocore[crt]` is installed (it's in `requirements.txt`) — without it boto3 can't read the login session's temporary credentials.
