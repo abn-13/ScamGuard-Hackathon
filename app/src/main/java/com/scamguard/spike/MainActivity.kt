@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.scamguard.spike.backend.BackgroundMonitoring
 import com.scamguard.spike.email.EmailListActivity
 import com.scamguard.spike.registration.RegistrationActivity
 import com.scamguard.spike.registration.UserSession
@@ -36,6 +37,8 @@ class MainActivity : ComponentActivity() {
             finish()
             return
         }
+
+        BackgroundMonitoring.schedule(this)
 
         setContent {
             ScamGuardSpikeTheme {

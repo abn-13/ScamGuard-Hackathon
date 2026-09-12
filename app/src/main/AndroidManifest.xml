@@ -2,9 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- SMS module: on-device permissions, requested again at runtime -->
+    <!-- SMS module: on-device permission, requested again at runtime. Only READ_SMS now:
+         RECEIVE_SMS was for live broadcast capture, since dropped. Confirmed via testing
+         that SMS_RECEIVED is delivered exclusively to the default SMS app on this
+         platform, never to a third-party receiver, so SMS monitoring is poll-based
+         (PollSmsWorker) like email, not broadcast-driven. -->
     <uses-permission android:name="android.permission.READ_SMS" />
-    <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <!-- Also SMS module: computes is_known_sender by looking up the sender in Contacts -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
 
