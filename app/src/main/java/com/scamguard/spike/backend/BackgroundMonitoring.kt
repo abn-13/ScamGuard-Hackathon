@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.scamguard.spike.email.PollEmailWorker
 import com.scamguard.spike.sms.PollSmsWorker
 import java.util.concurrent.TimeUnit
 
@@ -13,22 +14,26 @@ import java.util.concurrent.TimeUnit
  * doesn't reset the schedule or duplicate jobs on repeated calls.
  *
  * 15 minutes is Android's enforced minimum interval for periodic work, not a choice made
- * here -- there's no faster option without a push mechanism (which doesn't exist for SMS
- * on this platform, see PollSmsWorker, and would need Gmail Pub/Sub + a public backend
- * endpoint for email).
+ * here -- there's no faster option without a push mechanism. Confirmed by testing that
+ * SMS_RECEIVED doesn't reach this app on this platform (see PollSmsWorker), and Gmail has
+ * no simple on-device push either (would need Cloud Pub/Sub + a public backend endpoint).
  */
 object BackgroundMonitoring {
     private val POLL_INTERVAL = 15L to TimeUnit.MINUTES
 
     fun schedule(context: Context) {
-        val smsRequest = PeriodicWorkRequestBuilder<PollSmsWorker>(
-            POLL_INTERVAL.first, POLL_INTERVAL.second
-        ).build()
+        val workManager = WorkManager.getInstance(context)
 
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+        workManager.enqueueUniquePeriodicWork(
             PollSmsWorker.UNIQUE_WORK_NAME,
             ExistingPeriodicWorkPolicy.KEEP,
-            smsRequest
+            PeriodicWorkRequestBuilder<PollSmsWorker>(POLL_INTERVAL.first, POLL_INTERVAL.second).build()
+        )
+
+        workManager.enqueueUniquePeriodicWork(
+            PollEmailWorker.UNIQUE_WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            PeriodicWorkRequestBuilder<PollEmailWorker>(POLL_INTERVAL.first, POLL_INTERVAL.second).build()
         )
     }
 }

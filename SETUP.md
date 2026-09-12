@@ -72,28 +72,33 @@ flight). To make that work:
 sender's number matches a saved Contact; for email, whether the message is part of a
 Gmail thread with more than one message (i.e. there's been a reply already).
 
-## 6. Background monitoring (SMS)
+## 6. Background monitoring (SMS + email)
 
-New messages are checked even when the app isn't open, via a periodic background job
-(`PollSmsWorker`, runs every 15 minutes -- Android's enforced minimum for periodic work,
-not a choice made here). It re-reads the SMS inbox and checks whatever hasn't been seen
-before; results are stored on-device (`CheckedMessageStore`) so the SMS screen shows them
-immediately next time it's opened, with no re-check needed.
+New messages are checked even when the app isn't open, via periodic background jobs
+(`PollSmsWorker` and `PollEmailWorker`, each running every 15 minutes -- Android's
+enforced minimum for periodic work, not a choice made here). Both re-check whatever
+hasn't been seen before and store results on-device (`CheckedMessageStore`), so the
+relevant screen shows them immediately next time it's opened, with no re-check needed.
 
-**Why polling and not instant/live:** we originally built this as a broadcast-driven
+**Why polling and not instant/live:** we originally built SMS as a broadcast-driven
 receiver (fires the instant a text arrives) but confirmed via Android's own broadcast
 dispatch log that `SMS_RECEIVED` is delivered exclusively to the default SMS app on this
 platform -- no third-party app's receiver gets it, dynamic or manifest-declared. Polling
-was the fallback that's actually provable to work.
+was the fallback that's actually provable to work, and email needs the same approach
+regardless since Gmail has no simple on-device push either.
 
-Needs READ_SMS + READ_CONTACTS granted at least once (visiting the SMS screen and
-accepting the permission prompt) before it can do anything -- until then it silently
+**SMS** needs READ_SMS + READ_CONTACTS granted at least once (visiting the SMS screen
+and accepting the permission prompt) before it can do anything -- until then it silently
 no-ops rather than failing.
 
-Email background monitoring doesn't exist yet (only manual "Refresh emails" for now) --
-Gmail has no simple on-device push either, so it needs the same polling approach, plus a
-still-open question about whether the Gmail OAuth token can silently refresh in the
-background without prompting the user again.
+**Email** needs "Authorize Gmail access" tapped at least once on the Email screen.
+After that, `PollEmailWorker` gets a fresh access token *silently* (no UI, no repeated
+consent) via the same Authorization API the interactive flow uses -- confirmed by
+directly testing it from a real background Worker context, not assumed from
+documentation. If Gmail access is later revoked from the user's Google Account settings,
+that silent refresh will fail (it would need UI to re-consent, which a background job
+can't show) and the poll cycle is skipped until the user re-authorizes from the Email
+screen.
 
 Currently, checking a message doesn't alert the user on-device (no push notification) --
 that's separate in-progress work; it does still log/alert family via Telegram once
