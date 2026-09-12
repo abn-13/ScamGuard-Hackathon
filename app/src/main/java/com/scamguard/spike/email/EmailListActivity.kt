@@ -40,11 +40,26 @@ import kotlinx.coroutines.launch
 
 class EmailListActivity : ComponentActivity() {
 
+    companion object {
+        // How many of the most-recent fetched emails get auto-checked per fetchEmails()
+        // call -- see loadInbox()'s equivalent in SmsListActivity for why: a real inbox
+        // can have plenty of pre-existing mail the user already dealt with, and checking
+        // all of it at once is needless backend load for messages that aren't actionable
+        // "new" protection anyway.
+        private const val INITIAL_CHECK_LIMIT = 10
+    }
+
     private var accessToken by mutableStateOf<String?>(null)
     private var signedInEmail by mutableStateOf<String?>(null)
     private var isLoading by mutableStateOf(false)
     private var errorMessage by mutableStateOf<String?>(null)
     private val emails = mutableStateListOf<EmailMessageItem>()
+
+    // Keyed on EmailMessageItem's own equals() (not checkState -- see that class), so a
+    // message already given a verdict keeps it across fetchEmails() re-fetches instead of
+    // being re-sent to the backend every "Refresh emails" tap. Only in-memory: a fresh
+    // process re-checks everything once, which is fine for this spike.
+    private val checkedResults = mutableMapOf<EmailMessageItem, CheckState.Done>()
 
     private val consentLauncher = registerForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult()
@@ -131,7 +146,7 @@ class EmailListActivity : ComponentActivity() {
                 signedInEmail = email
                 emails.clear()
                 emails.addAll(items)
-                items.forEach { checkEmail(it) }
+                items.take(INITIAL_CHECK_LIMIT).forEach { checkEmail(it) }
             } catch (e: Exception) {
                 errorMessage = "Failed to fetch emails: ${e.message}"
             } finally {
@@ -142,16 +157,24 @@ class EmailListActivity : ComponentActivity() {
 
     /** Task 4: POST this already-fetched email (with its on-device is_known_sender) to the backend. */
     private fun checkEmail(item: EmailMessageItem) {
+        checkedResults[item]?.let {
+            item.checkState.value = it
+            return
+        }
         item.checkState.value = CheckState.Checking
         lifecycleScope.launch {
-            item.checkState.value = ScamGuardApiClient.checkMessage(
+            val result = ScamGuardApiClient.checkMessage(
                 source = MessageSource.EMAIL,
                 sender = item.sender,
                 bodyText = item.bodyText,
                 subject = item.subject,
                 isKnownSender = item.isKnownSender,
-                receivedAtMillis = item.timestampMillis
+                receivedAtMillis = item.timestampMillis,
+                replyTo = item.replyTo,
+                authenticationResults = item.authenticationResults
             )
+            item.checkState.value = result
+            if (result is CheckState.Done) checkedResults[item] = result
         }
     }
 }

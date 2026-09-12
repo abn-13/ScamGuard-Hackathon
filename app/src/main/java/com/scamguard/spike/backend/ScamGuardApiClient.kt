@@ -37,7 +37,10 @@ object ScamGuardApiClient {
         bodyText: String,
         subject: String? = null,
         isKnownSender: Boolean,
-        receivedAtMillis: Long
+        receivedAtMillis: Long,
+        // Task 3b evidence -- email only, both optional/backward-compatible on the backend.
+        replyTo: String? = null,
+        authenticationResults: String? = null
     ): CheckState = withContext(Dispatchers.IO) {
         try {
             val url = URL("${BackendConfig.BASE_URL}/check-message")
@@ -45,7 +48,13 @@ object ScamGuardApiClient {
                 requestMethod = "POST"
                 doOutput = true
                 connectTimeout = 10_000
-                readTimeout = 20_000
+                // Was 20s: with checks now running genuinely concurrently (see agent.py),
+                // a full-inbox refresh can fire a dozen+ real Bedrock calls at once, and
+                // each one (LLM turn + tool-use round-trips) can legitimately take well
+                // over 20s under that contention -- not a hang, just real latency. Backend
+                // log confirmed several calls were finishing successfully with valid
+                // verdicts after the old 20s timeout had already given up on them.
+                readTimeout = 60_000
                 setRequestProperty("Content-Type", "application/json")
             }
 
@@ -55,6 +64,10 @@ object ScamGuardApiClient {
                 put("sender", sender)
                 put("body_text", bodyText)
                 if (!subject.isNullOrBlank()) put("subject", subject)
+                if (!replyTo.isNullOrBlank()) put("reply_to", replyTo)
+                if (!authenticationResults.isNullOrBlank()) {
+                    put("authentication_results", authenticationResults)
+                }
                 put("is_known_sender", isKnownSender)
                 put("received_at", Instant.ofEpochMilli(receivedAtMillis).toString())
             }

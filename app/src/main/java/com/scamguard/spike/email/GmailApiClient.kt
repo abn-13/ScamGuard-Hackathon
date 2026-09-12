@@ -44,7 +44,10 @@ object GmailApiClient {
 
             val items = messageRefs.map { ref ->
                 // "full" (not just "metadata") so we get the actual body to send the
-                // backend for judging, not just the From/Subject headers.
+                // backend for judging, not just the From/Subject headers -- and, unlike
+                // "metadata" with setMetadataHeaders(...), "full" already returns every
+                // header on the message, so Reply-To/Authentication-Results need no
+                // extra request.
                 val full = service.users().messages().get("me", ref.id)
                     .setFormat("full")
                     .execute()
@@ -67,12 +70,22 @@ object GmailApiClient {
                     snippet = full.snippet ?: "",
                     bodyText = bodyText,
                     timestampMillis = full.internalDate ?: 0L,
-                    isKnownSender = threadMessageCount > 1
+                    isKnownSender = threadMessageCount > 1,
+                    // Backend Task 3b evidence (both optional/backward-compatible):
+                    replyTo = findHeader(headers, "Reply-To"),
+                    // A message can carry more than one Authentication-Results header
+                    // (one per hop); headers are listed newest-first, so the first match
+                    // is the one Gmail's own receiving MTA stamped -- the trusted value
+                    // Task 3b requires, as opposed to one copied from forwarded body text.
+                    authenticationResults = findHeader(headers, "Authentication-Results")
                 )
             }
 
             profileEmail to items
         }
+
+    private fun findHeader(headers: List<com.google.api.services.gmail.model.MessagePartHeader>, name: String): String? =
+        headers.firstOrNull { it.name.equals(name, ignoreCase = true) }?.value
 
     /**
      * Walks the MIME part tree for a text/plain body, decoding the URL-safe base64 Gmail

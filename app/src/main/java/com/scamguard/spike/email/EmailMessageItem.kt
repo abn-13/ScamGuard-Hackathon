@@ -14,7 +14,13 @@ data class EmailMessageItem(
     val bodyText: String,
     // Computed on-device from Gmail thread history (Task 4): true when this message is
     // part of a multi-message thread, i.e. there's been back-and-forth with this sender.
-    val isKnownSender: Boolean
+    val isKnownSender: Boolean,
+    // Task 3b evidence, both optional/backward-compatible with the backend schema.
+    // replyTo: the message's own Reply-To header, if any (weak From/Reply-To signal).
+    val replyTo: String? = null,
+    // authenticationResults: the RECEIVING provider's (Gmail's) own Authentication-Results
+    // header -- never something pulled from inside the message body -- see GmailApiClient.
+    val authenticationResults: String? = null
 ) {
     /** Not a constructor property on purpose -- see SmsMessageItem for why. */
     val checkState = mutableStateOf<CheckState>(CheckState.Idle)

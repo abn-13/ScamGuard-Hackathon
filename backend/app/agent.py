@@ -1,4 +1,5 @@
 import json
+import threading
 
 from pydantic import BaseModel, Field
 from strands import Agent
@@ -97,7 +98,13 @@ say "blocked" or "flagged" with no reason.
 # scam examples *and* real legitimate messages so it doesn't cry wolf, and
 # adjust the wording above until verdicts look right for both.
 
-
+# Strands' Agent keeps per-call state that isn't safe to share across threads at once
+# (see ConcurrencyException). A single cached instance would force every /check-message
+# request to queue behind whichever one got there first -- checking a whole inbox at
+# once could then take (message count x seconds per call), well past the app's read
+# timeout. Building a fresh Agent per request instead is cheap (just a boto3 client
+# under the hood, no network round trip at construction) and lets requests run
+# concurrently, bounded by _BEDROCK_CONCURRENCY below.
 def _build_agent() -> Agent:
     if not settings.bedrock_model_id:
         raise RuntimeError("BEDROCK_MODEL_ID not configured (check .env)")
@@ -118,13 +125,26 @@ def _build_agent() -> Agent:
     )
 
 
-def get_agent() -> Agent:
-    """A fresh Agent per call, deliberately not cached/shared -- a Strands Agent
-    holds per-invocation state and can't handle concurrent calls on the same
-    instance. Building one is cheap (no network call happens until it's actually
-    invoked), so this lets concurrent /check-message requests run independently
-    instead of queuing behind a shared, single-flight instance."""
-    return _build_agent()
+# Fully unbounded concurrency (one fresh Agent per request, no cap) let a full-inbox
+# refresh fire a dozen+ simultaneous Bedrock calls, which was enough to trip AWS's own
+# throttling (ModelThrottledException) -- and each throttled call's retry/backoff then
+# held its thread for a long time, saturating FastAPI's whole thread pool so even /health
+# stopped responding. Capping how many requests reach Bedrock at once keeps enough
+# parallelism to avoid that.
+#
+# Tried lowering this to 2 on the theory that less concurrency means less per-call
+# contention/throttling and so *faster* individual calls -- measured the opposite: with
+# a ~10-message burst, concurrency=2 means 5 sequential rounds through Bedrock before the
+# last message even starts, and each round is several Bedrock turns (tool call -> reason
+# -> Verdict), not one round trip. That pushed most of the batch past the Android client's
+# timeout even though every call eventually succeeded server-side (61 verdicts produced,
+# only 9 delivered in one test). At 4, the same burst is ~3 rounds, which is why it only
+# had a few late finishers instead of most of them. In this range, queue depth (burst size
+# / concurrency) dominates over any throttling-driven slowdown -- that theory only held at
+# full unbounded concurrency (the ModelThrottledException case above), not here. Raise
+# further only if paired with confirming the account's real Bedrock throughput can take it.
+_BEDROCK_CONCURRENCY = 4
+_bedrock_semaphore = threading.BoundedSemaphore(_BEDROCK_CONCURRENCY)
 
 
 def _apply_sender_identity_floor(
@@ -160,7 +180,7 @@ def _apply_sender_identity_floor(
 
 def run_pipeline(message: IncomingMessage) -> Verdict:
     """Run one message through the reasoning agent and return a structured verdict."""
-    agent = get_agent()
+    agent = _build_agent()
     domain_context = ""
     domain_assessment = {}
     authentication_assessment = {}
@@ -188,7 +208,8 @@ def run_pipeline(message: IncomingMessage) -> Verdict:
         + domain_context
         + f"Message:\n{message.body_text}"
     )
-    result = agent(prompt, structured_output_model=Verdict)
+    with _bedrock_semaphore:
+        result = agent(prompt, structured_output_model=Verdict)
     return _apply_sender_identity_floor(
         result.structured_output, domain_assessment, authentication_assessment
     )

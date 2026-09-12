@@ -43,6 +43,13 @@ import kotlinx.coroutines.withContext
 
 class SmsListActivity : ComponentActivity() {
 
+    companion object {
+        // How many of the most-recent existing messages get auto-checked on first
+        // load/refresh -- see loadInbox(). Live incoming messages (registerLiveReceiver)
+        // are always checked regardless of this limit.
+        private const val INITIAL_CHECK_LIMIT = 10
+    }
+
     // READ_CONTACTS is needed to compute is_known_sender (Task 4), alongside the
     // SMS-reading permissions the spike already requested.
     private val requiredPermissions = arrayOf(
@@ -54,6 +61,12 @@ class SmsListActivity : ComponentActivity() {
     private var permissionGranted by mutableStateOf(false)
     private val messages = mutableStateListOf<SmsMessageItem>()
     private var receiver: SmsReceiver? = null
+
+    // Keyed on SmsMessageItem's own equals() (sender/timestamp/body, not checkState -- see
+    // that class), so a message already given a verdict keeps it across loadInbox() re-reads
+    // instead of being re-sent to the backend every "Refresh inbox" tap. Only in-memory: a
+    // fresh process re-checks everything once, which is fine for this spike.
+    private val checkedResults = mutableMapOf<SmsMessageItem, CheckState.Done>()
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -104,7 +117,13 @@ class SmsListActivity : ComponentActivity() {
         val inbox = SmsReader.readInbox(this)
         messages.addAll(inbox)
         registerLiveReceiver()
-        inbox.forEach { checkMessage(it) }
+        // Only auto-check the most recent few on load, not the whole inbox: a real
+        // install can have dozens of pre-existing messages the user already read and
+        // dealt with, and checking every one of them at once is needless backend load
+        // for messages that aren't actionable "new" protection anyway. inbox is already
+        // DESC by date (see SmsReader), so take() keeps the newest ones. Older messages
+        // stay listed with no verdict rather than silently getting one later.
+        inbox.take(INITIAL_CHECK_LIMIT).forEach { checkMessage(it) }
     }
 
     private fun registerLiveReceiver() {
@@ -127,18 +146,24 @@ class SmsListActivity : ComponentActivity() {
 
     /** Task 4: compute is_known_sender on-device, then POST to the backend and show the verdict. */
     private fun checkMessage(item: SmsMessageItem) {
+        checkedResults[item]?.let {
+            item.checkState.value = it
+            return
+        }
         item.checkState.value = CheckState.Checking
         lifecycleScope.launch {
             val isKnown = withContext(Dispatchers.IO) {
                 ContactLookup.isKnownSender(this@SmsListActivity, item.sender)
             }
-            item.checkState.value = ScamGuardApiClient.checkMessage(
+            val result = ScamGuardApiClient.checkMessage(
                 source = MessageSource.SMS,
                 sender = item.sender,
                 bodyText = item.body,
                 isKnownSender = isKnown,
                 receivedAtMillis = item.timestampMillis
             )
+            item.checkState.value = result
+            if (result is CheckState.Done) checkedResults[item] = result
         }
     }
 }
