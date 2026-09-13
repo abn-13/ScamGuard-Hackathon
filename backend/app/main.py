@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from fastapi import Depends, FastAPI, HTTPException
 from sqlmodel import Session
 
-from .agent import run_pipeline
+from .agent import get_verdict
 from .alerts import send_family_alert
 from .db import engine, get_session, init_db
 from .models import FamilyMember, Message, RiskLevel, User
@@ -104,7 +104,7 @@ def check_message(payload: IncomingMessage):
             raise HTTPException(status_code=404, detail=f"No user with id {payload.user_id}")
 
     try:
-        verdict = run_pipeline(payload)
+        verdict = get_verdict(payload)
     except Exception as exc:  # noqa: BLE001 -- deliberately broad: any missing
         # credential/config (Bedrock, model access, etc.) should degrade to a
         # clear 503 instead of a bare 500, so teammates aren't blocked on each

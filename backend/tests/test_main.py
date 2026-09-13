@@ -64,7 +64,7 @@ def test_check_message_flow_flags_high_risk_and_alerts_family(client):
         risk_level=RiskLevel.high,
         reason="Impersonates a bank and asks for a one-time password.",
     )
-    with patch("app.main.run_pipeline", return_value=fake_verdict) as mock_pipeline, \
+    with patch("app.main.get_verdict", return_value=fake_verdict) as mock_pipeline, \
          patch("app.main.send_family_alert") as mock_alert:
         resp = client.post(
             "/check-message",
@@ -113,7 +113,7 @@ def test_email_accepts_optional_task3b_identity_headers(client):
     user_id = user_resp.json()["id"]
     fake_verdict = Verdict(risk_level=RiskLevel.low, reason="No strong warning found.")
 
-    with patch("app.main.run_pipeline", return_value=fake_verdict) as pipeline:
+    with patch("app.main.get_verdict", return_value=fake_verdict) as pipeline:
         resp = client.post(
             "/check-message",
             json={

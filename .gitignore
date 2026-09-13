@@ -18,3 +18,8 @@ backend/.pytest_cache
 backend/*.db
 backend/.env
 backend/reports/
+
+# Local AgentCore CLI state -- hardcodes this machine's absolute paths, everyone
+# who deploys generates their own via `agentcore configure`
+backend/.bedrock_agentcore.yaml
+backend/.bedrock_agentcore/

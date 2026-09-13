@@ -1,6 +1,7 @@
 import json
 import threading
 
+import boto3
 from pydantic import BaseModel, Field
 from strands import Agent
 from strands.models import BedrockModel
@@ -255,3 +256,42 @@ def run_pipeline(message: IncomingMessage) -> Verdict:
     return _apply_sender_identity_floor(
         result.structured_output, domain_assessment, authentication_assessment
     )
+
+
+# Lazy + cached: constructing a boto3 client does no network I/O, but building it
+# only when AgentCore is actually configured keeps local dev (AGENTCORE_RUNTIME_ARN
+# unset) from needing agentcore-related IAM permissions at all.
+_agentcore_client = None
+
+
+def _get_agentcore_client():
+    global _agentcore_client
+    if _agentcore_client is None:
+        _agentcore_client = boto3.client(
+            "bedrock-agentcore", region_name=settings.aws_region
+        )
+    return _agentcore_client
+
+
+def _invoke_agentcore(message: IncomingMessage) -> Verdict:
+    """Run the pipeline via a deployed Bedrock AgentCore Runtime instead of in-process.
+    The runtime (agentcore_entry.py) runs the exact same run_pipeline() below, just
+    inside AWS's managed container instead of this FastAPI process."""
+    client = _get_agentcore_client()
+    response = client.invoke_agent_runtime(
+        agentRuntimeArn=settings.agentcore_runtime_arn,
+        payload=message.model_dump_json().encode("utf-8"),
+    )
+    body = response["response"].read()
+    return Verdict.model_validate_json(body)
+
+
+def get_verdict(message: IncomingMessage) -> Verdict:
+    """What app/main.py calls for every /check-message request. Runs the agent
+    in-process by default (no AWS setup beyond the existing Bedrock access); once
+    AGENTCORE_RUNTIME_ARN is set (see backend/README.md "AgentCore deployment"),
+    routes through the deployed AgentCore Runtime instead. Unset the env var to
+    fall back to in-process without any code change."""
+    if settings.agentcore_runtime_arn:
+        return _invoke_agentcore(message)
+    return run_pipeline(message)

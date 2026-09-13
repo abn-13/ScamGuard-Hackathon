@@ -93,6 +93,50 @@ Verified working on the team account (`us-east-1`) with `BEDROCK_MODEL_ID=us.ant
 
 **Gotcha to know about:** a model showing up in `aws bedrock list-foundation-models` or `list-inference-profiles` does **not** mean your account has access to it — that's requested separately per model in the Bedrock console. Sonnet 5 listed fine but returned `AccessDeniedException` on an actual call; Haiku 4.5 worked. Test with a real request, not just the listing command, before assuming a different model ID works for you.
 
+## AgentCore deployment (optional)
+
+Not required — `/check-message` runs the agent in-process by default, which is enough
+for a local/recorded demo. This is only for the "deployed with AgentCore" bonus.
+
+`agentcore_entry.py` (repo root of `backend/`) wraps the exact same `run_pipeline()`
+from `app/agent.py` for AWS Bedrock AgentCore Runtime. `app/agent.py`'s `get_verdict()`
+already knows to route through it once it's deployed — no further code changes needed.
+
+**Steps (run from `backend/`, with the venv from "Running it locally" active):**
+
+1. `pip install bedrock-agentcore-starter-toolkit` — the `agentcore` CLI. (This is
+   separate from `bedrock-agentcore` in `requirements.txt`, which is the runtime SDK
+   that runs *inside* the deployed container.)
+2. `agentcore configure --entrypoint agentcore_entry.py` — writes `.bedrock_agentcore.yaml`.
+   Accept the default of letting it auto-create an IAM execution role; it needs
+   `bedrock:InvokeModel*` on the same model as `BEDROCK_MODEL_ID`, which the
+   auto-created role includes.
+3. `agentcore deploy --env BEDROCK_MODEL_ID=<same value as your local .env> --auto-update-on-conflict`
+   — builds the container (via CodeBuild, so local Docker isn't required), pushes it
+   to ECR, and creates/updates the Runtime. Takes a few minutes; prints an
+   `agentRuntimeArn` when done — that's what you need next. (Older toolkit versions
+   call this command `agentcore launch` instead — check `agentcore --help`.)
+
+   **Important:** the deployed container never sees your local `.env` (it's
+   gitignored on purpose, so it's not baked into the image). `BEDROCK_MODEL_ID` is
+   the only required var (`app/agent.py` raises if it's missing); pass any other
+   `config.py` var the same way via another `--env KEY=VALUE` if you want that
+   tool's real behavior instead of its graceful-degradation stub (e.g.
+   `SAFE_BROWSING_API_KEY` for real link checks). Don't pass `AWS_ACCESS_KEY_ID`/
+   `AWS_SECRET_ACCESS_KEY` — the execution role from step 2 already gives the
+   container Bedrock access.
+4. Smoke-test it directly: `agentcore invoke '{"user_id": 1, "source": "sms", "sender": "+15555550100", "body_text": "test", "is_known_sender": false, "received_at": "2026-01-01T00:00:00Z"}'`
+   — should return a `risk_level`/`reason` verdict.
+5. Set `AGENTCORE_RUNTIME_ARN=<the arn from step 3>` in `backend/.env` and restart
+   `uvicorn`. `/check-message` now runs through the deployed Runtime instead of
+   in-process; remove the env var to switch back.
+
+**What this needs on the AWS side beyond the existing Bedrock access (Task 5):**
+IAM permissions to create an execution role, an ECR repo, a CodeBuild project, and
+the AgentCore Runtime resource itself (broad/admin access on the team account covers
+this). If your AWS identity is locked down to just Bedrock invoke, ask whoever admins
+the account for those permissions before step 2.
+
 ## Notes
 - Never commit `.env` — already gitignored.
 - `backend/*.db` (the local SQLite file) is also gitignored — everyone gets their own local data.

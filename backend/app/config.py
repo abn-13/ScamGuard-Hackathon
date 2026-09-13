@@ -34,6 +34,10 @@ class Settings:
     # Only needed to build a tappable https://t.me/<username>?start=<code> link for the
     # app to show; without it the app falls back to showing the raw code to send manually.
     telegram_bot_username: Optional[str] = os.environ.get("TELEGRAM_BOT_USERNAME")
+    # Set only after deploying agentcore_entry.py with the `agentcore` CLI (see
+    # backend/README.md "AgentCore deployment"). When unset, /check-message runs the
+    # agent in-process as before -- no AgentCore setup required for local dev.
+    agentcore_runtime_arn: Optional[str] = os.environ.get("AGENTCORE_RUNTIME_ARN")
 
 
 settings = Settings()

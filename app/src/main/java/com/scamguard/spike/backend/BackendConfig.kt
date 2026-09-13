@@ -7,10 +7,11 @@ package com.scamguard.spike.backend
 object BackendConfig {
 
     /**
-     * 10.0.2.2 is the Android emulator's alias for the host machine's localhost, so this
-     * works out of the box against `uvicorn app.main:app --reload` running on your dev
-     * machine. Testing on a physical device? Point this at your machine's LAN IP instead,
-     * e.g. "http://192.168.1.23:8000" (same Wi-Fi network, backend reachable on that port).
+     * Points at the always-on backend deployed to AWS Lightsail Containers (see
+     * backend/README.md "Cloud deployment"), so any teammate's physical device can use
+     * the app without your dev machine running. For local backend development instead,
+     * temporarily switch to "http://10.0.2.2:8000" (emulator) or your LAN IP (physical
+     * device on the same Wi-Fi as `uvicorn app.main:app --reload`).
      */
-    const val BASE_URL = "http://10.0.2.2:8000"
+    const val BASE_URL = "https://scamguard-backend.xnwn17mgscevj.us-east-1.cs.amazonlightsail.com"
 }
