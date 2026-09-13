@@ -119,6 +119,30 @@ object ScamGuardApiClient {
     }
 
     /**
+     * Edits an existing family member's username/phone. POST, not PUT/PATCH -- see
+     * backend/app/main.py::update_family_member for why (Android's HttpURLConnection
+     * doesn't support PATCH). Returns the same shape as [registerFamilyMember] so the
+     * caller can refresh its cached copy the same way either call leaves it.
+     */
+    suspend fun updateFamilyMember(
+        familyMemberId: Long,
+        username: String,
+        phoneNumber: String
+    ): Result<FamilyMemberRegistration> {
+        val payload = JSONObject().apply {
+            put("username", username)
+            put("phone_number", phoneNumber)
+        }
+        return postJson("/family-members/$familyMemberId", payload).map {
+            FamilyMemberRegistration(
+                id = it.getLong("id"),
+                telegramLinkCode = if (it.isNull("telegram_link_code")) null else it.getString("telegram_link_code"),
+                telegramLinkUrl = if (it.isNull("telegram_link_url")) null else it.getString("telegram_link_url")
+            )
+        }
+    }
+
+    /**
      * On-demand check after the family member has sent their link code (or tapped the
      * deep link) to the bot -- see backend/app/telegram_link.py for why this has to be a
      * request the app triggers rather than something that "just happens" automatically.

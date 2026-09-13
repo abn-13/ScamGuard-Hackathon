@@ -98,9 +98,12 @@ class RegistrationActivity : ComponentActivity() {
                     return@launch
                 }
                 // Cached locally (not just sent to the backend) so GuardianAlerter can send
-                // an SMS straight from this device -- including from a background Worker,
-                // with no network round trip needed to look the number back up.
-                UserSession.setGuardianPhoneNumber(this@RegistrationActivity, familyPhoneNumber)
+                // an SMS straight from this device -- including from a background Worker --
+                // and so EditContactActivity has an id to update and values to pre-fill,
+                // all with no network round trip (there's no GET endpoint for this).
+                UserSession.setGuardian(
+                    this@RegistrationActivity, family.id, familyUsername, familyPhoneNumber
+                )
 
                 // family.telegramLinkCode/telegramLinkUrl are intentionally unused here --
                 // see the class doc for why (Telegram linking isn't exposed in the UI).
