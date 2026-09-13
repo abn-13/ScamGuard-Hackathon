@@ -12,7 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -136,54 +137,75 @@ private fun RegistrationScreen(
         modifier = modifier
             .fillMaxSize()
             .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Create your ScamGuard account")
-        Text("This is the person whose SMS/Gmail is being protected.")
+        Text("Create your ScamGuard account", style = MaterialTheme.typography.headlineSmall)
 
-        OutlinedTextField(
-            value = username,
-            onValueChange = { username = it },
-            label = { Text("Username") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-        OutlinedTextField(
-            value = phoneNumber,
-            onValueChange = { phoneNumber = it },
-            label = { Text("Phone number") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-        OutlinedTextField(
-            value = gmail,
-            onValueChange = { gmail = it },
-            label = { Text("Gmail address") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
+        OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    "This is the person whose SMS/Gmail is being protected.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    label = { Text("Username") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = phoneNumber,
+                    onValueChange = { phoneNumber = it },
+                    label = { Text("Phone number") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = gmail,
+                    onValueChange = { gmail = it },
+                    label = { Text("Gmail address") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
+        }
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text("Family member to alert (optional)", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "They'll be notified if a message is flagged risky. You can add this later instead.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedTextField(
+                    value = familyUsername,
+                    onValueChange = { familyUsername = it },
+                    label = { Text("Family member's username") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = familyPhoneNumber,
+                    onValueChange = { familyPhoneNumber = it },
+                    label = { Text("Family member's phone number") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
+        }
 
-        Text("Family member to alert (optional)")
-        Text("They'll be notified if a message is flagged risky. You can add this later instead.")
-
-        OutlinedTextField(
-            value = familyUsername,
-            onValueChange = { familyUsername = it },
-            label = { Text("Family member's username") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-        OutlinedTextField(
-            value = familyPhoneNumber,
-            onValueChange = { familyPhoneNumber = it },
-            label = { Text("Family member's phone number") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-
-        errorMessage?.let { Text(it) }
+        errorMessage?.let {
+            Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+        }
 
         Button(
             onClick = {

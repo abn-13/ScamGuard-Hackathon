@@ -15,7 +15,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -73,7 +75,7 @@ class SmsListActivity : ComponentActivity() {
     // before this Activity ever runs in this process -- e.g. a text arrives while the app
     // is closed. Reading from the same store means a re-check on "Refresh inbox" reuses
     // that result instead of hitting the backend again.
-    private val checkedMessages by lazy { CheckedMessageStore(this) }
+    private val checkedMessages by lazy { CheckedMessageStore.getInstance(this) }
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -174,15 +176,23 @@ private fun SmsScreen(
 ) {
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
         if (!permissionGranted) {
-            Text("This screen needs SMS and Contacts permission to read your inbox and check senders.")
+            Text(
+                "This screen needs SMS and Contacts permission to read your inbox and check senders.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Button(onClick = onRequestPermission) {
                 Text("Grant permissions")
             }
             return@Column
         }
 
-        Text("${messages.size} message(s)", modifier = Modifier.padding(bottom = 8.dp))
-        Button(onClick = onRefresh) {
+        Text(
+            "${messages.size} message(s)",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        FilledTonalButton(onClick = onRefresh) {
             Text("Refresh inbox")
         }
 
@@ -196,11 +206,18 @@ private fun SmsScreen(
 
 @Composable
 private fun SmsMessageCard(message: SmsMessageItem) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(text = message.sender)
-            Text(text = formatTimestamp(message.timestampMillis))
-            Text(text = message.body)
+    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(text = message.sender, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = formatTimestamp(message.timestampMillis),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(text = message.body, style = MaterialTheme.typography.bodyMedium)
             CheckStateLabel(message.checkState.value)
         }
     }

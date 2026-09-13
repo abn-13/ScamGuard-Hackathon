@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <!-- Matches BackgroundLight in ui/theme/Color.kt; used only for the brief pre-Compose
+         window flash (see themes.xml). The Compose theme is the actual source of truth. -->
+    <color name="window_background">#F7FAFC</color>
 </resources>

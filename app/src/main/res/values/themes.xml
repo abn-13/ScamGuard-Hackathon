@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.ScamGuardSpike" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.ScamGuardSpike" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Every Activity is 100% Compose (setContent { ScamGuardSpikeTheme { ... } }),
+             so this only covers the brief pre-Compose-draw window flash. Matching it to
+             the new blue/teal palette's background avoids a jarring default-platform-white
+             flash right before Compose paints. -->
+        <item name="android:windowBackground">@color/window_background</item>
+        <item name="android:statusBarColor">@color/window_background</item>
+    </style>
 </resources>

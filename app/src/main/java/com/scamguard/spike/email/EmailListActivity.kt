@@ -15,8 +15,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -208,19 +210,31 @@ private fun EmailScreen(
 ) {
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
         if (signedInEmail == null) {
-            Text("Authorize Gmail access to fetch recent messages via the Gmail API.")
+            Text(
+                "Authorize Gmail access to fetch recent messages via the Gmail API.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Button(onClick = onAuthorize, enabled = !isLoading) {
                 Text(if (isLoading) "Waiting..." else "Authorize Gmail access")
             }
-            errorMessage?.let { Text(it) }
+            errorMessage?.let {
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+            }
             return@Column
         }
 
-        Text("Signed in as $signedInEmail")
-        Button(onClick = onRefresh, enabled = !isLoading) {
+        Text(
+            "Signed in as $signedInEmail",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        FilledTonalButton(onClick = onRefresh, enabled = !isLoading) {
             Text(if (isLoading) "Loading..." else "Refresh emails")
         }
-        errorMessage?.let { Text(it) }
+        errorMessage?.let {
+            Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+        }
         if (isLoading) {
             CircularProgressIndicator(modifier = Modifier.padding(16.dp))
         }
@@ -235,12 +249,19 @@ private fun EmailScreen(
 
 @Composable
 private fun EmailMessageCard(email: EmailMessageItem) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(text = email.sender)
-            Text(text = formatTimestamp(email.timestampMillis))
-            Text(text = email.subject)
-            Text(text = email.snippet)
+    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(text = email.sender, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = formatTimestamp(email.timestampMillis),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(text = email.subject, style = MaterialTheme.typography.titleSmall)
+            Text(text = email.snippet, style = MaterialTheme.typography.bodyMedium)
             CheckStateLabel(email.checkState.value)
         }
     }

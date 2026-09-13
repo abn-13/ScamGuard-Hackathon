@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -107,8 +108,12 @@ private fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("ScamGuard — Data Source Feasibility Spike")
-        Text("Two independent data sources. Pick one to test.")
+        Text("ScamGuard — Data Source Feasibility Spike", style = MaterialTheme.typography.headlineSmall)
+        Text(
+            "Two independent data sources. Pick one to test.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         Button(onClick = onTestSms) {
             Text("Test SMS Reading (device permission)")
         }

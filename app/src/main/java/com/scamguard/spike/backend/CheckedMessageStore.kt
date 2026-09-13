@@ -14,8 +14,15 @@ import android.database.sqlite.SQLiteOpenHelper
  *
  * Plain SQLiteOpenHelper rather than Room: one table, a handful of columns, no need for
  * Room's annotation-processing setup for something this small.
+ *
+ * Constructor is private -- use [getInstance]. A SQLiteOpenHelper is meant to be held for
+ * as long as possible and reused (that's how it manages its connections safely), not
+ * constructed fresh per call: checkAndPersist() used to do `CheckedMessageStore(context)`
+ * on every single message checked and never closed it, which meant a background poll over
+ * a 50-message inbox leaked 50 SQLiteConnectionPool objects in one run (confirmed live via
+ * repeated "SQLiteConnection ... was leaked!" warnings in Logcat).
  */
-class CheckedMessageStore(context: Context) :
+class CheckedMessageStore private constructor(context: Context) :
     SQLiteOpenHelper(context.applicationContext, DB_NAME, null, DB_VERSION) {
 
     data class Result(val riskLevel: String, val reason: String)
@@ -70,6 +77,19 @@ class CheckedMessageStore(context: Context) :
         private const val DB_NAME = "scamguard_checked_messages.db"
         private const val DB_VERSION = 1
         private const val TABLE = "checked_messages"
+
+        @Volatile
+        private var instance: CheckedMessageStore? = null
+
+        /**
+         * One shared instance for the whole process -- callers (Activities, background
+         * Workers) never construct this directly or close it; it lives for as long as the
+         * process does, which is the correct/recommended SQLiteOpenHelper lifecycle.
+         */
+        fun getInstance(context: Context): CheckedMessageStore =
+            instance ?: synchronized(this) {
+                instance ?: CheckedMessageStore(context.applicationContext).also { instance = it }
+            }
 
         /** Stable identity for one message -- same scheme a re-check must reproduce. */
         fun keyFor(source: MessageSource, sender: String, receivedAtMillis: Long): String =

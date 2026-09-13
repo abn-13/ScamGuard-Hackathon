@@ -25,7 +25,7 @@ suspend fun checkAndPersist(
     replyTo: String? = null,
     authenticationResults: String? = null
 ): Boolean {
-    val store = CheckedMessageStore(context)
+    val store = CheckedMessageStore.getInstance(context)
     val key = CheckedMessageStore.keyFor(source, sender, receivedAtMillis)
     if (store.get(key) != null) return false
 

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -128,11 +129,16 @@ private fun TelegramLinkScreen(
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("Link $guardianUsername's Telegram (optional)")
+        Text(
+            "Link $guardianUsername's Telegram (optional)",
+            style = MaterialTheme.typography.headlineSmall
+        )
         Text(
             "They'll also get a Telegram message whenever a risky message is flagged, " +
                 "in addition to the SMS alert already set up. Send this code to our bot " +
-                "on Telegram to link it -- skip this if you'd rather do it later."
+                "on Telegram to link it -- skip this if you'd rather do it later.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         if (linkUrl != null) {
@@ -140,7 +146,7 @@ private fun TelegramLinkScreen(
                 Text("Open Telegram")
             }
         }
-        Text("Code: $linkCode")
+        Text("Code: $linkCode", style = MaterialTheme.typography.titleMedium)
 
         OutlinedButton(
             onClick = onCheckStatus,
@@ -152,7 +158,9 @@ private fun TelegramLinkScreen(
         if (isChecking) {
             CircularProgressIndicator(modifier = Modifier.padding(top = 4.dp))
         }
-        statusMessage?.let { Text(it) }
+        statusMessage?.let {
+            Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
 
         if (linked) {
             Button(onClick = onContinue, modifier = Modifier.fillMaxWidth()) {
