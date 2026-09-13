@@ -248,3 +248,44 @@ def test_link_telegram_polls_and_reports_still_unlinked(client):
 def test_link_telegram_unknown_family_member_returns_404(client):
     resp = client.post("/family-members/999999/link-telegram")
     assert resp.status_code == 404
+
+
+def test_update_family_member_changes_username_and_phone(client):
+    user_id = client.post(
+        "/users",
+        json={
+            "username": "edit_test_parent",
+            "phone_number": "+15550000012",
+            "gmail": "edit.parent@gmail.com",
+        },
+    ).json()["id"]
+    family = client.post(
+        "/family-members",
+        json={
+            "user_id": user_id,
+            "username": "edit_test_child",
+            "phone_number": "+15550000013",
+            "telegram_chat_id": "999",
+        },
+    ).json()
+
+    resp = client.post(
+        f"/family-members/{family['id']}",
+        json={"username": "edit_test_child_renamed", "phone_number": "+15550000099"},
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["id"] == family["id"]
+    assert body["username"] == "edit_test_child_renamed"
+    assert body["phone_number"] == "+15550000099"
+    # Untouched by the update -- telegram linking status is a separate concern.
+    assert body["telegram_chat_id"] == "999"
+
+
+def test_update_family_member_unknown_id_returns_404(client):
+    resp = client.post(
+        "/family-members/999999",
+        json={"username": "nobody", "phone_number": "+10000000000"},
+    )
+    assert resp.status_code == 404

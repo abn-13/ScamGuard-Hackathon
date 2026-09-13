@@ -3,4 +3,5 @@
     <string name="registration_screen_title">Sign Up</string>
     <string name="sms_screen_title">SMS Reading Test</string>
     <string name="email_screen_title">Email Reading Test</string>
+    <string name="edit_contact_screen_title">Contact Info</string>
 </resources>

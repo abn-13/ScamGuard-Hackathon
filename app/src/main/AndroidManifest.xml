@@ -58,6 +58,12 @@
             android:theme="@style/Theme.ScamGuardSpike" />
 
         <activity
+            android:name=".registration.EditContactActivity"
+            android:exported="false"
+            android:label="@string/edit_contact_screen_title"
+            android:theme="@style/Theme.ScamGuardSpike" />
+
+        <activity
             android:name=".sms.SmsListActivity"
             android:exported="false"
             android:label="@string/sms_screen_title"

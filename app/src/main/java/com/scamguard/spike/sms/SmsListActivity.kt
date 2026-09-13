@@ -7,16 +7,23 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -25,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -37,6 +45,8 @@ import com.scamguard.spike.backend.ScamGuardApiClient
 import com.scamguard.spike.notifications.GuardianAlerter
 import com.scamguard.spike.notifications.RiskNotifier
 import com.scamguard.spike.registration.UserSession
+import com.scamguard.spike.ui.GateCard
+import com.scamguard.spike.ui.ScreenHeader
 import com.scamguard.spike.ui.theme.ScamGuardSpikeTheme
 import java.time.Instant
 import java.time.ZoneId
@@ -96,6 +106,7 @@ class SmsListActivity : ComponentActivity() {
                         modifier = Modifier.padding(innerPadding),
                         permissionGranted = permissionGranted,
                         messages = messages,
+                        onBack = { finish() },
                         onRequestPermission = { permissionLauncher.launch(requiredPermissions) },
                         onRefresh = { loadInbox() }
                     )
@@ -171,34 +182,44 @@ private fun SmsScreen(
     modifier: Modifier = Modifier,
     permissionGranted: Boolean,
     messages: List<SmsMessageItem>,
+    onBack: () -> Unit,
     onRequestPermission: () -> Unit,
     onRefresh: () -> Unit
 ) {
-    Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
-        if (!permissionGranted) {
-            Text(
-                "This screen needs SMS and Contacts permission to read your inbox and check senders.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Button(onClick = onRequestPermission) {
-                Text("Grant permissions")
+    Column(modifier = modifier.fillMaxSize()) {
+        ScreenHeader(title = "SMS reading", icon = Icons.Filled.Sms, onBack = onBack)
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 20.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            if (!permissionGranted) {
+                GateCard(
+                    icon = Icons.Filled.Sms,
+                    message = "This screen needs SMS and Contacts permission to read your inbox and check senders.",
+                    buttonLabel = "Grant permissions",
+                    onClick = onRequestPermission
+                )
+                return@Column
             }
-            return@Column
-        }
 
-        Text(
-            "${messages.size} message(s)",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-        FilledTonalButton(onClick = onRefresh) {
-            Text("Refresh inbox")
-        }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    "${messages.size} message(s)",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                FilledTonalButton(onClick = onRefresh) {
+                    Text("Refresh inbox")
+                }
+            }
 
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(messages) { message ->
-                SmsMessageCard(message)
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(messages) { message ->
+                    SmsMessageCard(message)
+                }
             }
         }
     }
@@ -207,18 +228,31 @@ private fun SmsScreen(
 @Composable
 private fun SmsMessageCard(message: SmsMessageItem) {
     ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+        Row(
+            modifier = Modifier.padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text(text = message.sender, style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = formatTimestamp(message.timestampMillis),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(text = message.body, style = MaterialTheme.typography.bodyMedium)
-            CheckStateLabel(message.checkState.value)
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Filled.Sms, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(text = message.sender, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = formatTimestamp(message.timestampMillis),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(text = message.body, style = MaterialTheme.typography.bodyMedium)
+                CheckStateLabel(message.checkState.value)
+            }
         }
     }
 }

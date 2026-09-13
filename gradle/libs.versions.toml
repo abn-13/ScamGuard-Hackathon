@@ -30,6 +30,10 @@ androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "u
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+# Versioned via the composeBom platform above (androidx.compose.material group), no
+# separate version.ref needed. Added for the card-style Home/Edit-contact screens -- the
+# app previously drew zero icons (emoji only), but that direction leans on real iconography.
+androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }
 google-api-client = { group = "com.google.api-client", name = "google-api-client", version.ref = "googleApiClient" }
 google-api-services-gmail = { group = "com.google.apis", name = "google-api-services-gmail", version.ref = "googleApiServicesGmail" }

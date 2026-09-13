@@ -46,6 +46,15 @@ class FamilyMemberCreate(BaseModel):
     telegram_chat_id: Optional[str] = None
 
 
+class FamilyMemberUpdate(BaseModel):
+    """Edits an existing family member's contact details. telegram_chat_id/
+    telegram_link_code are deliberately not editable here -- linking status stays
+    whatever it already was (see app/telegram_link.py)."""
+
+    username: str
+    phone_number: str
+
+
 class FamilyMemberOut(BaseModel):
     """FamilyMember plus a ready-to-tap Telegram deep link the app can show right after
     registration -- telegram_link_url is computed (app/telegram_link.py), not a DB column."""

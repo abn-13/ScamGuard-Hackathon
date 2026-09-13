@@ -12,6 +12,7 @@ from .schemas import (
     CheckResponse,
     FamilyMemberCreate,
     FamilyMemberOut,
+    FamilyMemberUpdate,
     IncomingMessage,
     TelegramLinkStatus,
     UserCreate,
@@ -46,6 +47,17 @@ def create_user(payload: UserCreate, session: Session = Depends(get_session)):
     return user
 
 
+def _to_family_member_out(member: FamilyMember) -> FamilyMemberOut:
+    """Shared by create and update -- both need the same computed telegram_link_url
+    alongside the raw FamilyMember columns."""
+    return FamilyMemberOut(
+        **member.model_dump(),
+        telegram_link_url=build_link_url(member.telegram_link_code)
+        if member.telegram_link_code
+        else None,
+    )
+
+
 @app.post("/family-members", response_model=FamilyMemberOut)
 def create_family_member(
     payload: FamilyMemberCreate, session: Session = Depends(get_session)
@@ -60,12 +72,30 @@ def create_family_member(
     session.add(member)
     session.commit()
     session.refresh(member)
-    return FamilyMemberOut(
-        **member.model_dump(),
-        telegram_link_url=build_link_url(member.telegram_link_code)
-        if member.telegram_link_code
-        else None,
-    )
+    return _to_family_member_out(member)
+
+
+@app.post("/family-members/{family_member_id}", response_model=FamilyMemberOut)
+def update_family_member(
+    family_member_id: int,
+    payload: FamilyMemberUpdate,
+    session: Session = Depends(get_session),
+):
+    # POST, not PUT/PATCH: Android's HttpURLConnection.setRequestMethod("PATCH") throws
+    # ProtocolException on stock Android (PATCH isn't in its allowed-method list), and
+    # every other route here is already POST -- staying consistent avoids that dead end
+    # rather than adding an HTTP client dependency just to unlock one verb.
+    member = session.get(FamilyMember, family_member_id)
+    if not member:
+        raise HTTPException(
+            status_code=404, detail=f"No family member with id {family_member_id}"
+        )
+    member.username = payload.username
+    member.phone_number = payload.phone_number
+    session.add(member)
+    session.commit()
+    session.refresh(member)
+    return _to_family_member_out(member)
 
 
 @app.post("/family-members/{family_member_id}/link-telegram", response_model=TelegramLinkStatus)
