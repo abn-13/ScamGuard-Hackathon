@@ -21,9 +21,10 @@ import com.scamguard.spike.backend.checkAndPersist
  * whatever's new -- the same approach email background monitoring needs anyway, since
  * Gmail has no simple on-device push either.
  *
- * Cheap to run often: SmsReader caps the inbox read at 50 messages, and checkAndPersist
- * skips anything already in the CheckedMessageStore with just a local SQLite lookup, so a
- * real network call only happens for genuinely new messages.
+ * Cheap to run often: each run only looks at the newest CHECK_LIMIT messages (not
+ * SmsReader's full 50-message read), and checkAndPersist skips anything already in the
+ * CheckedMessageStore with just a local SQLite lookup, so a real network call only happens
+ * for genuinely new messages.
  */
 class PollSmsWorker(
     appContext: Context,
@@ -38,7 +39,13 @@ class PollSmsWorker(
         ) == PackageManager.PERMISSION_GRANTED
         if (!hasPermission) return Result.success()
 
-        val inbox = SmsReader.readInbox(applicationContext)
+        // Only the newest few each run, not the whole inbox -- keeps every 15-minute cycle
+        // (including the first one, which WorkManager runs almost immediately after
+        // scheduling) cheap and bounded, rather than re-scanning a 50-message inbox every
+        // time. checkAndPersist below still skips anything already cached, so this is safe
+        // to run on the same newest messages repeatedly -- only genuinely new ones cost a
+        // real backend call. inbox is already DESC by date (see SmsReader).
+        val inbox = SmsReader.readInbox(applicationContext).take(CHECK_LIMIT)
         for (message in inbox) {
             val isKnown = ContactLookup.isKnownSender(applicationContext, message.sender)
             checkAndPersist(
@@ -55,5 +62,6 @@ class PollSmsWorker(
 
     companion object {
         const val UNIQUE_WORK_NAME = "sms-poll"
+        private const val CHECK_LIMIT = 5
     }
 }

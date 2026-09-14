@@ -3,6 +3,7 @@ package com.scamguard.spike.email
 import android.util.Base64
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
+import com.google.api.client.http.HttpRequestInitializer
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.gmail.Gmail
 import com.google.api.services.gmail.model.MessagePart
@@ -20,10 +21,23 @@ object GmailApiClient {
 
     private fun buildService(accessToken: String): Gmail {
         val credential = GoogleCredential.Builder().build().setAccessToken(accessToken)
+        // fetchProfileAndRecentEmails below makes up to ~50 sequential Gmail API calls
+        // (one get + one thread lookup per message, for up to MAX_RESULTS messages) in a
+        // single pass. The Google HTTP client's default connect/read timeout is only 20s
+        // per request -- confirmed via user testing that a single slow request under real
+        // mobile network conditions throws SocketTimeoutException ("Read timed out"),
+        // which aborts the whole fetch even though every other call would've succeeded.
+        // Widen both timeouts on top of the credential's own request initializer (which
+        // attaches the Authorization header) rather than replacing it.
+        val requestInitializer = HttpRequestInitializer { request ->
+            credential.initialize(request)
+            request.connectTimeout = 30_000
+            request.readTimeout = 30_000
+        }
         return Gmail.Builder(
             GoogleNetHttpTransport.newTrustedTransport(),
             GsonFactory.getDefaultInstance(),
-            credential
+            requestInitializer
         )
             .setApplicationName("ScamGuard Spike")
             .build()

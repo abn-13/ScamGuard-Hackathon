@@ -41,10 +41,6 @@ import com.scamguard.spike.backend.CheckState
 import com.scamguard.spike.backend.CheckStateLabel
 import com.scamguard.spike.backend.CheckedMessageStore
 import com.scamguard.spike.backend.MessageSource
-import com.scamguard.spike.backend.ScamGuardApiClient
-import com.scamguard.spike.notifications.GuardianAlerter
-import com.scamguard.spike.notifications.RiskNotifier
-import com.scamguard.spike.registration.UserSession
 import com.scamguard.spike.ui.GateCard
 import com.scamguard.spike.ui.ScreenHeader
 import com.scamguard.spike.ui.theme.ScamGuardSpikeTheme
@@ -56,20 +52,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * On-screen inbox view. This is one of two ways a message gets checked -- the other is
- * [PollSmsWorker], which runs periodically in the background whether this screen is open
- * or not (see that class for why: SMS_RECEIVED broadcast delivery to this app doesn't work
- * on this platform, confirmed by testing, so there's no live-push path here). Both read
- * and write the same [CheckedMessageStore], so whichever gets to a message first is the
- * one that's shown.
+ * On-screen inbox view. All actual checking happens in the background, on a schedule --
+ * [PollSmsWorker] polls every 15 minutes whether this screen is open or not (see that class
+ * for why: SMS_RECEIVED broadcast delivery to this app doesn't work on this platform,
+ * confirmed by testing, so there's no live-push path here). This screen never calls the
+ * backend itself; it only reads whatever PollSmsWorker has already written to the shared
+ * [CheckedMessageStore] and displays it -- opening or refreshing this screen is purely a
+ * local cache read, so it can't double-fire a guardian alert for something the background
+ * worker already handled, and it stays instant regardless of backend latency.
  */
 class SmsListActivity : ComponentActivity() {
-
-    companion object {
-        // How many of the most-recent existing messages get auto-checked on first
-        // load/refresh, not the whole inbox -- see loadInbox().
-        private const val INITIAL_CHECK_LIMIT = 10
-    }
 
     // READ_CONTACTS is needed to compute is_known_sender (Task 4), alongside the
     // SMS-reading permission the spike already requested.
@@ -125,60 +117,22 @@ class SmsListActivity : ComponentActivity() {
         messages.clear()
         val inbox = SmsReader.readInbox(this)
         messages.addAll(inbox)
-        // Only auto-check the most recent few on load, not the whole inbox: a real
-        // install can have dozens of pre-existing messages the user already read and
-        // dealt with, and checking every one of them at once is needless backend load
-        // for messages that aren't actionable "new" protection anyway. inbox is already
-        // DESC by date (see SmsReader), so take() keeps the newest ones. Older messages
-        // stay listed with no verdict rather than silently getting one later.
-        inbox.take(INITIAL_CHECK_LIMIT).forEach { checkMessage(it) }
+        // Detection happens purely in the background (PollSmsWorker, every 15 minutes) --
+        // loading/refreshing this screen never calls the backend itself, it only shows
+        // whatever's already been checked and cached.
+        inbox.forEach { showCachedResult(it) }
     }
 
-    /** Task 4: compute is_known_sender on-device, then POST to the backend and show the verdict. */
-    private fun checkMessage(item: SmsMessageItem) {
-        item.checkState.value = CheckState.Checking
+    /** Reads this message's already-computed verdict from the shared cache, if any -- never
+     * calls the backend. Leaves checkState at its default (CheckState.Idle) for a message
+     * PollSmsWorker hasn't reached yet; it'll show up here on the next screen refresh after
+     * that background poll runs. */
+    private fun showCachedResult(item: SmsMessageItem) {
         lifecycleScope.launch {
             val key = CheckedMessageStore.keyFor(MessageSource.SMS, item.sender, item.timestampMillis)
             val existing = withContext(Dispatchers.IO) { checkedMessages.get(key) }
             if (existing != null) {
                 item.checkState.value = CheckState.Done(existing.riskLevel, existing.reason)
-                return@launch
-            }
-
-            val userId = UserSession.getUserId(this@SmsListActivity)
-            if (userId == null) {
-                item.checkState.value = CheckState.Failed("Not registered yet")
-                return@launch
-            }
-            val isKnown = withContext(Dispatchers.IO) {
-                ContactLookup.isKnownSender(this@SmsListActivity, item.sender)
-            }
-            val result = ScamGuardApiClient.checkMessage(
-                userId = userId,
-                source = MessageSource.SMS,
-                sender = item.sender,
-                bodyText = item.body,
-                isKnownSender = isKnown,
-                receivedAtMillis = item.timestampMillis
-            )
-            item.checkState.value = result
-            if (result is CheckState.Failed && result.isMissingUser) {
-                // Locally-cached user_id no longer exists on the backend (backend SQLite
-                // reset, or a stale pre-allowBackup=false session survived a reinstall) --
-                // recover instead of leaving this stuck on "Check failed" forever.
-                UserSession.recoverFromMissingUser(this@SmsListActivity)
-                return@launch
-            }
-            if (result is CheckState.Done) {
-                withContext(Dispatchers.IO) {
-                    checkedMessages.put(key, result.riskLevel, result.reason)
-                }
-                RiskNotifier.notifyIfRisky(
-                    this@SmsListActivity, MessageSource.SMS, item.sender, result.riskLevel, result.reason
-                )
-                GuardianAlerter.alertIfRisky(
-                    this@SmsListActivity, MessageSource.SMS, item.sender, result.riskLevel, result.reason
-                )
             }
         }
     }

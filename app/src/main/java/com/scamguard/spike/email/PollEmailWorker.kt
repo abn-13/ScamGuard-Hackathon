@@ -33,7 +33,11 @@ class PollEmailWorker(
             ?: return Result.success()
 
         val (_, emails) = GmailApiClient.fetchProfileAndRecentEmails(accessToken)
-        for (email in emails) {
+        // Only the newest few each run, not the whole fetched batch -- see PollSmsWorker's
+        // equivalent for why. Sorted defensively rather than trusting the Gmail API's
+        // response order to already be newest-first.
+        val newest = emails.sortedByDescending { it.timestampMillis }.take(CHECK_LIMIT)
+        for (email in newest) {
             checkAndPersist(
                 context = applicationContext,
                 source = MessageSource.EMAIL,
@@ -51,5 +55,6 @@ class PollEmailWorker(
 
     companion object {
         const val UNIQUE_WORK_NAME = "email-poll"
+        private const val CHECK_LIMIT = 5
     }
 }

@@ -40,29 +40,28 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.common.api.ApiException
 import com.scamguard.spike.backend.CheckState
 import com.scamguard.spike.backend.CheckStateLabel
+import com.scamguard.spike.backend.CheckedMessageStore
 import com.scamguard.spike.backend.MessageSource
-import com.scamguard.spike.backend.ScamGuardApiClient
-import com.scamguard.spike.notifications.GuardianAlerter
-import com.scamguard.spike.notifications.RiskNotifier
-import com.scamguard.spike.registration.UserSession
 import com.scamguard.spike.ui.GateCard
 import com.scamguard.spike.ui.ScreenHeader
 import com.scamguard.spike.ui.theme.ScamGuardSpikeTheme
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
+/**
+ * On-screen inbox view. All actual checking happens in the background, on a schedule --
+ * [PollEmailWorker] polls every 15 minutes whether this screen is open or not. This screen
+ * never calls the backend itself; it only reads whatever PollEmailWorker has already
+ * written to the shared [CheckedMessageStore] and displays it -- opening or refreshing this
+ * screen is purely a local cache read, so it can't double-fire a guardian alert for
+ * something the background worker already handled, and it stays instant regardless of
+ * backend latency.
+ */
 class EmailListActivity : ComponentActivity() {
-
-    companion object {
-        // How many of the most-recent fetched emails get auto-checked per fetchEmails()
-        // call -- see loadInbox()'s equivalent in SmsListActivity for why: a real inbox
-        // can have plenty of pre-existing mail the user already dealt with, and checking
-        // all of it at once is needless backend load for messages that aren't actionable
-        // "new" protection anyway.
-        private const val INITIAL_CHECK_LIMIT = 10
-    }
 
     private var accessToken by mutableStateOf<String?>(null)
     private var signedInEmail by mutableStateOf<String?>(null)
@@ -70,11 +69,10 @@ class EmailListActivity : ComponentActivity() {
     private var errorMessage by mutableStateOf<String?>(null)
     private val emails = mutableStateListOf<EmailMessageItem>()
 
-    // Keyed on EmailMessageItem's own equals() (not checkState -- see that class), so a
-    // message already given a verdict keeps it across fetchEmails() re-fetches instead of
-    // being re-sent to the backend every "Refresh emails" tap. Only in-memory: a fresh
-    // process re-checks everything once, which is fine for this spike.
-    private val checkedResults = mutableMapOf<EmailMessageItem, CheckState.Done>()
+    // Durable, not in-memory: PollEmailWorker can check an email and write its result here
+    // before this Activity ever runs in this process. Reading from the same store means a
+    // "Refresh emails" tap picks up background results instead of re-checking anything.
+    private val checkedMessages by lazy { CheckedMessageStore.getInstance(this) }
 
     private val consentLauncher = registerForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult()
@@ -185,7 +183,10 @@ class EmailListActivity : ComponentActivity() {
                 signedInEmail = email
                 emails.clear()
                 emails.addAll(items)
-                items.take(INITIAL_CHECK_LIMIT).forEach { checkEmail(it) }
+                // Detection happens purely in the background (PollEmailWorker, every 15
+                // minutes) -- fetching/refreshing this list never calls the backend itself,
+                // it only shows whatever's already been checked and cached.
+                items.forEach { showCachedResult(it) }
             } catch (e: Exception) {
                 errorMessage = "Failed to fetch emails: ${e.message}"
             } finally {
@@ -194,46 +195,16 @@ class EmailListActivity : ComponentActivity() {
         }
     }
 
-    /** Task 4: POST this already-fetched email (with its on-device is_known_sender) to the backend. */
-    private fun checkEmail(item: EmailMessageItem) {
-        checkedResults[item]?.let {
-            item.checkState.value = it
-            return
-        }
-        item.checkState.value = CheckState.Checking
+    /** Reads this email's already-computed verdict from the shared cache, if any -- never
+     * calls the backend. Leaves checkState at its default (CheckState.Idle) for a message
+     * PollEmailWorker hasn't reached yet; it'll show up here on the next screen refresh
+     * after that background poll runs. */
+    private fun showCachedResult(item: EmailMessageItem) {
         lifecycleScope.launch {
-            val userId = UserSession.getUserId(this@EmailListActivity)
-            if (userId == null) {
-                item.checkState.value = CheckState.Failed("Not registered yet")
-                return@launch
-            }
-            val result = ScamGuardApiClient.checkMessage(
-                userId = userId,
-                source = MessageSource.EMAIL,
-                sender = item.sender,
-                bodyText = item.bodyText,
-                subject = item.subject,
-                isKnownSender = item.isKnownSender,
-                receivedAtMillis = item.timestampMillis,
-                replyTo = item.replyTo,
-                authenticationResults = item.authenticationResults
-            )
-            item.checkState.value = result
-            if (result is CheckState.Failed && result.isMissingUser) {
-                // Locally-cached user_id no longer exists on the backend (backend SQLite
-                // reset, or a stale pre-allowBackup=false session survived a reinstall) --
-                // recover instead of leaving this stuck on "Check failed" forever.
-                UserSession.recoverFromMissingUser(this@EmailListActivity)
-                return@launch
-            }
-            if (result is CheckState.Done) {
-                checkedResults[item] = result
-                RiskNotifier.notifyIfRisky(
-                    this@EmailListActivity, MessageSource.EMAIL, item.sender, result.riskLevel, result.reason
-                )
-                GuardianAlerter.alertIfRisky(
-                    this@EmailListActivity, MessageSource.EMAIL, item.sender, result.riskLevel, result.reason
-                )
+            val key = CheckedMessageStore.keyFor(MessageSource.EMAIL, item.sender, item.timestampMillis)
+            val existing = withContext(Dispatchers.IO) { checkedMessages.get(key) }
+            if (existing != null) {
+                item.checkState.value = CheckState.Done(existing.riskLevel, existing.reason)
             }
         }
     }
