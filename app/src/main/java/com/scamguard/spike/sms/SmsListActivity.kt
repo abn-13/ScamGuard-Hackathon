@@ -162,6 +162,13 @@ class SmsListActivity : ComponentActivity() {
                 receivedAtMillis = item.timestampMillis
             )
             item.checkState.value = result
+            if (result is CheckState.Failed && result.isMissingUser) {
+                // Locally-cached user_id no longer exists on the backend (backend SQLite
+                // reset, or a stale pre-allowBackup=false session survived a reinstall) --
+                // recover instead of leaving this stuck on "Check failed" forever.
+                UserSession.recoverFromMissingUser(this@SmsListActivity)
+                return@launch
+            }
             if (result is CheckState.Done) {
                 withContext(Dispatchers.IO) {
                     checkedMessages.put(key, result.riskLevel, result.reason)

@@ -43,6 +43,10 @@ suspend fun checkAndPersist(
         authenticationResults = authenticationResults
     )
 
+    if (result is CheckState.Failed && result.isMissingUser) {
+        UserSession.recoverFromMissingUser(context)
+        return false
+    }
     if (result !is CheckState.Done) return false
 
     store.put(key, result.riskLevel, result.reason)

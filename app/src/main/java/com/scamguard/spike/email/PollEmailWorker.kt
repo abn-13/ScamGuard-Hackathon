@@ -3,12 +3,9 @@ package com.scamguard.spike.email
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.scamguard.spike.backend.MessageSource
 import com.scamguard.spike.backend.checkAndPersist
 import com.scamguard.spike.registration.UserSession
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 /**
  * Periodic background check for email, mirroring PollSmsWorker's approach: poll, not
@@ -32,7 +29,8 @@ class PollEmailWorker(
     override suspend fun doWork(): Result {
         if (UserSession.getUserId(applicationContext) == null) return Result.success()
 
-        val accessToken = silentAccessTokenOrNull() ?: return Result.success()
+        val accessToken = GoogleAuthHelper.silentAccessTokenOrNull(applicationContext)
+            ?: return Result.success()
 
         val (_, emails) = GmailApiClient.fetchProfileAndRecentEmails(accessToken)
         for (email in emails) {
@@ -49,22 +47,6 @@ class PollEmailWorker(
             )
         }
         return Result.success()
-    }
-
-    private suspend fun silentAccessTokenOrNull(): String? {
-        val request = GoogleAuthHelper.buildAuthorizationRequest()
-        val client = GoogleAuthHelper.authorizationClient(applicationContext)
-
-        val result = suspendCoroutine<AuthorizationResult?> { cont ->
-            client.authorize(request)
-                .addOnSuccessListener { cont.resume(it) }
-                .addOnFailureListener { cont.resume(null) }
-        } ?: return null
-
-        // hasResolution() == true means re-consent is needed (revoked, or never granted) --
-        // that requires UI a background Worker doesn't have. Skip rather than crash.
-        if (result.hasResolution()) return null
-        return result.accessToken
     }
 
     companion object {

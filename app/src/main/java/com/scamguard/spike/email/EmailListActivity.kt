@@ -115,6 +115,29 @@ class EmailListActivity : ComponentActivity() {
                 }
             }
         }
+
+        trySilentAuthorization()
+    }
+
+    // accessToken/signedInEmail are plain in-memory fields -- a fresh EmailListActivity
+    // instance (every time this screen is re-entered from Home) starts with neither, which
+    // used to mean re-tapping "Authorize Gmail access" on every visit even though Google
+    // already remembers the grant. Try the same zero-UI path PollEmailWorker uses for its
+    // background checks before falling back to showing that button -- most re-visits should
+    // never see it at all now.
+    private fun trySilentAuthorization() {
+        isLoading = true
+        lifecycleScope.launch {
+            val token = GoogleAuthHelper.silentAccessTokenOrNull(this@EmailListActivity)
+            if (token != null) {
+                onAuthorized(token)
+            } else {
+                // No prior grant, it was revoked, or the silent call failed -- any of
+                // those need the interactive "Authorize Gmail access" button, not an
+                // error message (this was an unprompted background attempt).
+                isLoading = false
+            }
+        }
     }
 
     private fun startAuthorization() {
@@ -196,6 +219,13 @@ class EmailListActivity : ComponentActivity() {
                 authenticationResults = item.authenticationResults
             )
             item.checkState.value = result
+            if (result is CheckState.Failed && result.isMissingUser) {
+                // Locally-cached user_id no longer exists on the backend (backend SQLite
+                // reset, or a stale pre-allowBackup=false session survived a reinstall) --
+                // recover instead of leaving this stuck on "Check failed" forever.
+                UserSession.recoverFromMissingUser(this@EmailListActivity)
+                return@launch
+            }
             if (result is CheckState.Done) {
                 checkedResults[item] = result
                 RiskNotifier.notifyIfRisky(

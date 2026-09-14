@@ -21,7 +21,18 @@ sealed class CheckState {
     data object Idle : CheckState()
     data object Checking : CheckState()
     data class Done(val riskLevel: String, val reason: String) : CheckState()
-    data class Failed(val message: String) : CheckState()
+    data class Failed(val message: String) : CheckState() {
+        /**
+         * True for the backend's `HTTPException(404, f"No user with id {id}")` (see
+         * backend/app/main.py) -- the locally-cached user_id no longer exists on the
+         * backend, either because the backend's SQLite got reset (no persistent volume on
+         * Lightsail) or, pre-`allowBackup=false`, because Android restored a stale session
+         * after a reinstall. Callers use this to trigger
+         * `UserSession.recoverFromMissingUser` instead of just showing "Check failed"
+         * forever.
+         */
+        val isMissingUser: Boolean get() = message.startsWith("No user with id")
+    }
 }
 
 /**
