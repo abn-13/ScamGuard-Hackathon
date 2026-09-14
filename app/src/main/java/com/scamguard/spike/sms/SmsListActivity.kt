@@ -3,6 +3,7 @@ package com.scamguard.spike.sms
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -37,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.scamguard.spike.backend.BackgroundMonitoring
 import com.scamguard.spike.backend.CheckState
 import com.scamguard.spike.backend.CheckStateLabel
 import com.scamguard.spike.backend.CheckedMessageStore
@@ -83,7 +85,10 @@ class SmsListActivity : ComponentActivity() {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
         permissionGranted = results.values.all { it }
-        if (permissionGranted) loadInbox()
+        if (permissionGranted) {
+            loadInbox()
+            BackgroundMonitoring.triggerInitialSmsCheck(this)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -106,7 +111,14 @@ class SmsListActivity : ComponentActivity() {
             }
         }
 
-        if (permissionGranted) loadInbox()
+        if (permissionGranted) {
+            loadInbox()
+            // Covers the "permission was already granted on a previous visit" case --
+            // triggerInitialSmsCheck is a no-op past the very first successful call
+            // (self-gated by its own persisted flag), so calling it here every time this
+            // screen opens is cheap and correct, not a repeat trigger.
+            BackgroundMonitoring.triggerInitialSmsCheck(this)
+        }
     }
 
     private fun hasPermissions(): Boolean = requiredPermissions.all {
@@ -117,6 +129,7 @@ class SmsListActivity : ComponentActivity() {
         messages.clear()
         val inbox = SmsReader.readInbox(this)
         messages.addAll(inbox)
+        Log.d(TAG, "loadInbox: read ${inbox.size} message(s) from device inbox")
         // Detection happens purely in the background (PollSmsWorker, every 15 minutes) --
         // loading/refreshing this screen never calls the backend itself, it only shows
         // whatever's already been checked and cached.
@@ -132,9 +145,16 @@ class SmsListActivity : ComponentActivity() {
             val key = CheckedMessageStore.keyFor(MessageSource.SMS, item.sender, item.timestampMillis)
             val existing = withContext(Dispatchers.IO) { checkedMessages.get(key) }
             if (existing != null) {
+                Log.d(TAG, "showCachedResult: cache HIT for $key -> ${existing.riskLevel}")
                 item.checkState.value = CheckState.Done(existing.riskLevel, existing.reason)
+            } else {
+                Log.d(TAG, "showCachedResult: cache MISS for $key")
             }
         }
+    }
+
+    private companion object {
+        const val TAG = "ScamGuard"
     }
 }
 

@@ -3,11 +3,14 @@ package com.scamguard.spike.sms
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.scamguard.spike.backend.MessageSource
 import com.scamguard.spike.backend.checkAndPersist
+
+private const val TAG = "ScamGuard"
 
 /**
  * Periodic background check for SMS, whether the app is open or not.
@@ -32,12 +35,16 @@ class PollSmsWorker(
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
+        Log.d(TAG, "PollSmsWorker: doWork() started")
         // Quietly no-op until the user has visited the SMS screen and granted READ_SMS/
         // READ_CONTACTS at least once -- not a failure worth retrying sooner for.
         val hasPermission = ContextCompat.checkSelfPermission(
             applicationContext, Manifest.permission.READ_SMS
         ) == PackageManager.PERMISSION_GRANTED
-        if (!hasPermission) return Result.success()
+        if (!hasPermission) {
+            Log.w(TAG, "PollSmsWorker: READ_SMS not granted, skipping this run")
+            return Result.success()
+        }
 
         // Only the newest few each run, not the whole inbox -- keeps every 15-minute cycle
         // (including the first one, which WorkManager runs almost immediately after
@@ -46,6 +53,7 @@ class PollSmsWorker(
         // to run on the same newest messages repeatedly -- only genuinely new ones cost a
         // real backend call. inbox is already DESC by date (see SmsReader).
         val inbox = SmsReader.readInbox(applicationContext).take(CHECK_LIMIT)
+        Log.d(TAG, "PollSmsWorker: checking ${inbox.size} message(s)")
         for (message in inbox) {
             val isKnown = ContactLookup.isKnownSender(applicationContext, message.sender)
             checkAndPersist(

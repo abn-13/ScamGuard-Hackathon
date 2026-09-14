@@ -2,6 +2,7 @@ package com.scamguard.spike.email
 
 import android.app.Activity
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -38,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.common.api.ApiException
+import com.scamguard.spike.backend.BackgroundMonitoring
 import com.scamguard.spike.backend.CheckState
 import com.scamguard.spike.backend.CheckStateLabel
 import com.scamguard.spike.backend.CheckedMessageStore
@@ -171,6 +173,11 @@ class EmailListActivity : ComponentActivity() {
             return
         }
         accessToken = token
+        // Called for both a fresh interactive grant and every routine silent re-auth on
+        // later visits -- triggerInitialEmailCheck doesn't need to tell those apart, it's
+        // self-gated by its own persisted flag and only really enqueues work the first
+        // time a token is ever obtained.
+        BackgroundMonitoring.triggerInitialEmailCheck(this)
         fetchEmails(token)
     }
 
@@ -183,11 +190,13 @@ class EmailListActivity : ComponentActivity() {
                 signedInEmail = email
                 emails.clear()
                 emails.addAll(items)
+                Log.d(TAG, "fetchEmails: fetched ${items.size} message(s)")
                 // Detection happens purely in the background (PollEmailWorker, every 15
                 // minutes) -- fetching/refreshing this list never calls the backend itself,
                 // it only shows whatever's already been checked and cached.
                 items.forEach { showCachedResult(it) }
             } catch (e: Exception) {
+                Log.e(TAG, "fetchEmails: failed", e)
                 errorMessage = "Failed to fetch emails: ${e.message}"
             } finally {
                 isLoading = false
@@ -204,9 +213,16 @@ class EmailListActivity : ComponentActivity() {
             val key = CheckedMessageStore.keyFor(MessageSource.EMAIL, item.sender, item.timestampMillis)
             val existing = withContext(Dispatchers.IO) { checkedMessages.get(key) }
             if (existing != null) {
+                Log.d(TAG, "showCachedResult: cache HIT for $key -> ${existing.riskLevel}")
                 item.checkState.value = CheckState.Done(existing.riskLevel, existing.reason)
+            } else {
+                Log.d(TAG, "showCachedResult: cache MISS for $key")
             }
         }
+    }
+
+    private companion object {
+        const val TAG = "ScamGuard"
     }
 }
 
